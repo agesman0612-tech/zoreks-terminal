@@ -147,7 +147,10 @@ export default function App() {
   const [tickers, setTickers] = useState({});
   const [status, setStatus] = useState('Yükleniyor...');
   const [activeTab, setActiveTab] = useState('altcoins');
+  const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  useEffect(() => setCurrentPage(1), [activeTab, searchTerm]);
   const [selectedCoin, setSelectedCoin] = useState(null);
   const [selectedNews, setSelectedNews] = useState(null);
   const [orderBook, setOrderBook] = useState({ bids: [], asks: [] });
@@ -1186,6 +1189,18 @@ export default function App() {
                                                 K/Z: %{((liveCoin.price / user.portfolio.find(p => p.symbol === liveCoin.symbol).avgPrice - 1) * 100).toFixed(2)}
                                              </p>
                                           </div>
+                                          {/* AI STRATEGY ADVICE BASED ON PNL */}
+                                          {(() => {
+                                             const pnl = ((liveCoin.price / user.portfolio.find(p => p.symbol === liveCoin.symbol).avgPrice - 1) * 100);
+                                             return (
+                                                <div className={`p-4 rounded-xl border border-white/5 text-center mt-4 ${pnl >= 5 ? 'bg-green-500/10' : pnl <= -5 ? 'bg-red-500/10' : 'bg-white/5'}`}>
+                                                   <p className="text-[8px] font-black uppercase tracking-widest text-gray-500 mb-1">AI POZİSYON ANALİZİ</p>
+                                                   <p className={`text-[10px] font-black uppercase tracking-widest ${pnl >= 5 ? 'text-green-400' : pnl <= -5 ? 'text-red-400' : 'text-cyan-400'}`}>
+                                                      {pnl >= 5 ? 'KAR HEDEFİNE ULAŞILDI: SATIŞ ÖNERİLİR.' : pnl <= -5 ? 'RİSK SINIRI AŞILDI: ZARAR KESEBİLİRSİNİZ.' : 'AKÜMÜLASYON: BEKLEME BÖLGESİNDESİNİZ.'}
+                                                   </p>
+                                                </div>
+                                             );
+                                          })()}
                                        </div>
                                     ) : (
                                        <div className="text-center py-20 opacity-30">
@@ -1460,7 +1475,7 @@ export default function App() {
             <h1 className="text-4xl font-black italic tracking-tighter uppercase text-white leading-none">ZOREKS</h1>
             <div className="flex items-center gap-2 mt-1">
                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-               <span className="text-[9px] font-black text-gray-600 tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.5</span>
+               <span className="text-[9px] font-black text-gray-600 tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.6</span>
             </div>
           </div>
         </div>
@@ -1607,7 +1622,7 @@ export default function App() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5 font-medium">
-                {list.map((t) => (
+                {list.slice((currentPage - 1) * 20, currentPage * 20).map((t) => (
                    <TickerRow 
                      key={t.symbol} 
                      t={t} 
@@ -1617,6 +1632,29 @@ export default function App() {
                 ))}
               </tbody>
             </table>
+            
+            {/* PAGINATION CONTROLS */}
+            {list.length > 20 && (
+               <div className="flex items-center justify-between p-6 bg-white/5 border-t border-white/5">
+                  <button 
+                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                     disabled={currentPage === 1}
+                     className="px-6 py-2 bg-white/10 rounded-xl text-[10px] font-black uppercase text-white hover:bg-cyan-500 transition-all disabled:opacity-50 disabled:hover:bg-white/10"
+                  >
+                     ÖNCEKİ
+                  </button>
+                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                     SAYFA {currentPage} / {Math.ceil(list.length / 20)}
+                  </span>
+                  <button 
+                     onClick={() => setCurrentPage(p => Math.min(Math.ceil(list.length / 20), p + 1))}
+                     disabled={currentPage === Math.ceil(list.length / 20)}
+                     className="px-6 py-2 bg-white/10 rounded-xl text-[10px] font-black uppercase text-white hover:bg-cyan-500 transition-all disabled:opacity-50 disabled:hover:bg-white/10"
+                  >
+                     SONRAKİ
+                  </button>
+               </div>
+            )}
           </div>
         ) : activeTab === 'haberler' ? (
           <div className="space-y-12 animate-in fade-in duration-1000">
