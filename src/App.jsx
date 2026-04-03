@@ -589,7 +589,8 @@ export default function App() {
     setShortTermSentiment({ buy: 0, sell: 0, ratio: 50 });
 
     const updateStats = async () => {
-      setAiAnalysis(generateDetailedAIAnalysis(selectedCoin));
+      const liveCoinData = tickers[symbol] || selectedCoin;
+      setAiAnalysis(generateDetailedAIAnalysis(liveCoinData));
       try {
         const [fRes, lsRes, kRes] = await Promise.all([
           fetch(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${symbol}`),
@@ -626,19 +627,22 @@ export default function App() {
 
     // 30s Refresh Interval
     const analysisTimer = setInterval(() => {
-      setAiAnalysis(generateDetailedAIAnalysis(selectedCoin));
+      const liveCoinData = tickers[symbol] || selectedCoin;
+      setAiAnalysis(generateDetailedAIAnalysis(liveCoinData));
     }, 30000);
 
     detailWs.current.onmessage = (e) => {
       const data = JSON.parse(e.data);
       
       if (data.e === 'bookTicker') {
-        const bestPrice = (parseFloat(data.b) + parseFloat(data.a)) / 2;
+        // Store bid/ask for spread display but DON'T override price here
+        // Price will be set by the @trade stream below to match TradingView charts
         setTickers(prev => ({
           ...prev,
           [symbol]: {
             ...(prev[symbol] || {}),
-            price: bestPrice,
+            bid: parseFloat(data.b),
+            ask: parseFloat(data.a),
             lastUpdate: Date.now()
           }
         }));
@@ -650,6 +654,16 @@ export default function App() {
         const qty = parseFloat(data.q);
         const isBuyerMaker = data.m; 
         const side = isBuyerMaker ? 'sell' : 'buy';
+
+        // UPDATE PRICE FROM ACTUAL TRADE - this matches TradingView chart prices exactly
+        setTickers(prev => ({
+          ...prev,
+          [symbol]: {
+            ...(prev[symbol] || {}),
+            price: price,
+            lastUpdate: Date.now()
+          }
+        }));
 
         const newTrade = { id: data.t, price, qty, time: new Date(data.T).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), side };
         setRecentTrades(prev => [newTrade, ...prev].slice(0, 15));
@@ -1508,7 +1522,7 @@ export default function App() {
                <h1 className="text-2xl md:text-4xl font-black italic tracking-tighter uppercase text-white leading-none">ZOREKS</h1>
                <div className="flex items-center gap-2 mt-1">
                   <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                  <span className="text-[8px] md:text-[9px] font-black text-gray-600 tracking-[0.3em] md:tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.21</span>
+                  <span className="text-[8px] md:text-[9px] font-black text-gray-600 tracking-[0.3em] md:tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.22</span>
                </div>
              </div>
           </div>
