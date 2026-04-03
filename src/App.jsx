@@ -1327,7 +1327,7 @@ export default function App() {
                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 h-full animate-in fade-in slide-in-from-left-8 duration-500">
                           <div className="bg-white/5 border border-white/10 p-5 md:p-8 rounded-2xl md:rounded-[3rem] glass flex flex-col overflow-hidden">
                              <h4 className="text-[10px] font-black text-cyan-400 uppercase tracking-widest mb-4 md:mb-6">EMİR DEFTERİ GÖRÜNÜMÜ</h4>
-                             <div className="flex-1 overflow-hidden font-mono text-[11px] space-y-1">
+                             <div className="flex-1 overflow-hidden font-mono text-[9px] md:text-[11px] space-y-1">
                                 {orderBook.asks.map((a, i) => (
                                    <div key={i} className="flex justify-between py-1 relative">
                                       <div className="absolute inset-0 bg-red-500/5 origin-left" style={{ width: `${(parseFloat(a[1]) / Math.max(...orderBook.asks.map(x=>parseFloat(x[1])))) * 100}%` }} />
@@ -1350,10 +1350,10 @@ export default function App() {
                              <h4 className="text-[10px] font-black text-cyan-400 uppercase tracking-widest mb-4 md:mb-6">SON İŞLEM AKIŞI</h4>
                              <div className="flex-1 overflow-y-auto no-scrollbar space-y-3">
                                 {recentTrades.map((tr) => (
-                                   <div key={tr.id} className="flex justify-between items-center bg-white/5 p-4 rounded-xl border border-white/5">
-                                      <span className={`text-sm font-black font-mono ${tr.side === 'buy' ? 'text-green-400' : 'text-red-500'}`}>{tr.price.toFixed(selectedCoin.price < 1 ? 6 : 2)}</span>
-                                      <span className="text-[10px] font-black text-slate-400">{tr.qty.toFixed(3)}</span>
-                                      <span className="text-[9px] font-bold text-gray-500">{tr.time}</span>
+                                   <div key={tr.id} className="flex justify-between items-center bg-white/5 p-3 md:p-4 rounded-xl border border-white/5">
+                                      <span className={`text-xs md:text-sm font-black font-mono ${tr.side === 'buy' ? 'text-green-400' : 'text-red-500'}`}>{tr.price.toFixed(selectedCoin.price < 1 ? 6 : 2)}</span>
+                                      <span className="text-[9px] md:text-[10px] font-black text-slate-400">{tr.qty.toFixed(3)}</span>
+                                      <span className="text-[8px] md:text-[9px] font-bold text-gray-500">{tr.time}</span>
                                    </div>
                                 ))}
                              </div>
@@ -1412,11 +1412,13 @@ export default function App() {
 
                {/* STICKY BOTTOM ACTION BAR (BINANCE STYLE) */}
                <div className="lg:hidden sticky bottom-0 left-0 w-full p-4 bg-[#030712]/95 backdrop-blur-2xl border-t border-white/5 flex gap-4 z-[100] pb-8">
-                  <button onClick={() => alert('Sistem Güncellemesi: Gelişmiş AL-SAT Tahtası Yakında Eklenecek.')} className="flex-1 bg-[#0ecb81] py-4 rounded-xl text-white font-black uppercase tracking-widest text-sm shadow-[0_0_20px_rgba(14,203,129,0.2)] active:scale-95 transition-transform flex items-center justify-center">
-                     AL
+                  <button onClick={() => alert('Sistem Güncellemesi: Gelişmiş AL-SAT Tahtası Yakında Eklenecek.')} className="flex-1 bg-[#0ecb81] py-3 rounded-xl text-white transition-transform flex flex-col items-center justify-center gap-0.5 shadow-[0_0_20px_rgba(14,203,129,0.2)] active:scale-95">
+                     <span className="font-black uppercase tracking-widest text-sm leading-none">AL</span>
+                     <span className="text-[10px] font-black font-mono opacity-80 leading-none">${liveCoin.price?.toLocaleString(undefined, { minimumFractionDigits: liveCoin.price < 1 ? 4 : 2 })}</span>
                   </button>
-                  <button onClick={() => alert('Sistem Güncellemesi: Gelişmiş AL-SAT Tahtası Yakında Eklenecek.')} className="flex-1 bg-[#f6465d] py-4 rounded-xl text-white font-black uppercase tracking-widest text-sm shadow-[0_0_20px_rgba(246,70,93,0.2)] active:scale-95 transition-transform flex items-center justify-center">
-                     SAT
+                  <button onClick={() => alert('Sistem Güncellemesi: Gelişmiş AL-SAT Tahtası Yakında Eklenecek.')} className="flex-1 bg-[#f6465d] py-3 rounded-xl text-white transition-transform flex flex-col items-center justify-center gap-0.5 shadow-[0_0_20px_rgba(246,70,93,0.2)] active:scale-95">
+                     <span className="font-black uppercase tracking-widest text-sm leading-none">SAT</span>
+                     <span className="text-[10px] font-black font-mono opacity-80 leading-none">${liveCoin.price?.toLocaleString(undefined, { minimumFractionDigits: liveCoin.price < 1 ? 4 : 2 })}</span>
                   </button>
                </div>
             </div>
@@ -1488,7 +1490,7 @@ export default function App() {
                <h1 className="text-2xl md:text-4xl font-black italic tracking-tighter uppercase text-white leading-none">ZOREKS</h1>
                <div className="flex items-center gap-2 mt-1">
                   <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                  <span className="text-[8px] md:text-[9px] font-black text-gray-600 tracking-[0.3em] md:tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.17</span>
+                  <span className="text-[8px] md:text-[9px] font-black text-gray-600 tracking-[0.3em] md:tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.18</span>
                </div>
              </div>
           </div>
