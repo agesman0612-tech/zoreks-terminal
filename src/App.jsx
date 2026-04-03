@@ -895,10 +895,10 @@ export default function App() {
       {selectedCoin && (() => {
         const liveCoin = tickers[selectedCoin.symbol] || selectedCoin;
         return (
-        <div className="fixed inset-0 z-[150] bg-[#030712]/98 backdrop-blur-3xl flex flex-col p-0 md:p-8 animate-in slide-in-from-bottom duration-500 overflow-hidden">
+        <div className="fixed inset-0 z-[150] bg-[#030712] md:bg-[#030712]/98 backdrop-blur-3xl animate-in slide-in-from-bottom duration-500 overflow-y-auto w-full h-full overscroll-y-contain">
            <button onClick={() => setSelectedCoin(null)} className="fixed top-4 right-4 md:top-6 md:right-6 w-10 h-10 md:w-12 md:h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-all border border-white/20 z-[200] shadow-2xl backdrop-blur-xl">✕</button>
            
-           <div className="w-full h-full max-w-7xl mx-auto bg-[#030712] border-0 md:border border-white/5 rounded-none md:rounded-[4rem] flex flex-col relative overflow-hidden shadow-2xl">
+           <div className="w-full min-h-screen max-w-7xl mx-auto md:my-8 bg-[#030712] border-0 md:border border-white/5 rounded-none md:rounded-[4rem] relative shadow-2xl">
               <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-500/5 blur-[120px] rounded-full pointer-events-none" />
               
               {/* MODAL HEADER */}
@@ -934,11 +934,11 @@ export default function App() {
                  </div>
               </div>
 
-              <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+              <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto relative">
                  {/* Main Content Area */}
-                 <div className="flex-1 p-4 md:p-8 overflow-y-auto custom-scrollbar border-b lg:border-b-0 lg:border-r border-white/10 pb-20 lg:pb-8">
+                 <div className="flex-1 p-4 md:p-8 border-b lg:border-b-0 lg:border-r border-white/10 pb-20 lg:pb-8">
                     {modalTab === 'chart' && (
-                       <div className="w-full h-[450px] md:h-full md:min-h-[500px] rounded-[2rem] overflow-hidden border border-white/5 shadow-2xl animate-in zoom-in-95 duration-500">
+                       <div className="w-full h-[450px] md:h-[600px] rounded-[2rem] overflow-hidden border border-white/5 shadow-2xl animate-in zoom-in-95 duration-500">
                           <AdvancedRealTimeChart symbol={`BINANCE:${liveCoin.symbol}`} theme="dark" autosize locale="tr" hide_side_toolbar={false} />
                        </div>
                     )}
@@ -1478,7 +1478,7 @@ export default function App() {
                <h1 className="text-2xl md:text-4xl font-black italic tracking-tighter uppercase text-white leading-none">ZOREKS</h1>
                <div className="flex items-center gap-2 mt-1">
                   <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                  <span className="text-[8px] md:text-[9px] font-black text-gray-600 tracking-[0.3em] md:tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.13</span>
+                  <span className="text-[8px] md:text-[9px] font-black text-gray-600 tracking-[0.3em] md:tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.14</span>
                </div>
              </div>
           </div>
