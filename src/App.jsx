@@ -320,7 +320,7 @@ export default function App() {
       localStorage.setItem('zoreks_user', JSON.stringify(enhancedUser));
       setShowLogin(false);
     } else {
-      alert("Hatalı kullanıcı adı veya şifre. (v4.0.2)");
+      alert("Hatalı kullanıcı adı veya şifre. (v4.0.3)");
     }
   };
 
@@ -1460,7 +1460,7 @@ export default function App() {
             <h1 className="text-4xl font-black italic tracking-tighter uppercase text-white leading-none">ZOREKS</h1>
             <div className="flex items-center gap-2 mt-1">
                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-               <span className="text-[9px] font-black text-gray-600 tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.2</span>
+               <span className="text-[9px] font-black text-gray-600 tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.3</span>
             </div>
           </div>
         </div>
@@ -1736,8 +1736,32 @@ export default function App() {
           <div className="max-w-4xl mx-auto space-y-10 animate-in fade-in duration-500 text-center">
              <div className="bg-white/5 p-12 rounded-[4rem] border border-white/10 glass shadow-[0_20px_60px_rgba(0,0,0,0.4)]">
                 <h2 className="text-5xl font-black italic text-cyan-400 uppercase tracking-[0.3em] mb-12">Yönetici Paneli</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                   <div className="bg-white/5 p-10 rounded-[2.5rem] text-left">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                   {/* BALANCE MANAGEMENT CARD */}
+                   <div className="bg-white/5 border border-white/10 p-10 rounded-[3rem] text-left lg:col-span-2 glass">
+                      <h3 className="text-xl font-black italic text-white tracking-widest mb-10 uppercase">SİMÜLASYON BAKİYE YÖNETİMİ</h3>
+                      <div className="flex items-center gap-6">
+                         <input 
+                           type="number" 
+                           id="fund-amount-v3" 
+                           placeholder="Yüklenecek Tutar (USD)" 
+                           className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-6 py-4 outline-none focus:border-cyan-500/50 text-white font-bold" 
+                         />
+                         <button 
+                           onClick={() => {
+                             const val = document.getElementById('fund-amount-v3').value;
+                             if(val) fundUser(val);
+                             document.getElementById('fund-amount-v3').value = '';
+                           }}
+                           className="bg-cyan-500 px-10 py-4 rounded-2xl text-white font-black hover:bg-cyan-400 transition-all uppercase text-xs shadow-2xl shadow-cyan-500/20"
+                         >
+                           BAKİYE EKLE
+                         </button>
+                      </div>
+                      <p className="text-[9px] font-bold text-gray-600 mt-4 italic uppercase">NOT: BU BAKİYE SADECE SİMÜLASYON İÇİNDİR VE SİTENİN DOĞRULUĞUNU HESAPLAMAK İÇİN KULLANILIR.</p>
+                   </div>
+
+                   <div className="bg-white/5 p-10 rounded-[2.5rem] text-left border border-white/10">
                       <h3 className="text-xs font-black text-gray-600 uppercase tracking-widest mb-6">Kara Liste (Ban)</h3>
                       <div className="space-y-4">
                          {bannedUsers.map(b => (
@@ -1749,7 +1773,7 @@ export default function App() {
                          </div>
                       </div>
                    </div>
-                   <div className="bg-white/5 p-10 rounded-[2.5rem] flex flex-col justify-center space-y-4 text-left">
+                   <div className="bg-white/5 p-10 rounded-[2.5rem] flex flex-col justify-center space-y-4 text-left border border-white/10">
                       <h3 className="text-xs font-black text-gray-600 uppercase tracking-widest mb-4">Sistem Sağlığı</h3>
                       <div className="flex justify-between font-black text-xs uppercase opacity-70"><span>Sunucu Gecikmesi:</span> <span className="text-cyan-400">14ms</span></div>
                       <div className="flex justify-between font-black text-xs uppercase opacity-70"><span>Canlı Veri Havuzu:</span> <span className="text-cyan-400">Aktif</span></div>
