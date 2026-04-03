@@ -60,6 +60,8 @@ export default function App() {
   const [recentTrades, setRecentTrades] = useState([]);
   const [fundingRate, setFundingRate] = useState(null);
   const [longShortData, setLongShortData] = useState(null);
+  const [aiAnalysis, setAiAnalysis] = useState(null);
+  const [modalTab, setModalTab] = useState('chart');
   const detailWs = useRef(null);
 
   // AUTH & PERSISTENCE
@@ -256,6 +258,8 @@ export default function App() {
       setRecentTrades([]);
       setFundingRate(null);
       setLongShortData(null);
+      setAiAnalysis(null);
+      setModalTab('chart');
       return;
     }
 
@@ -266,22 +270,25 @@ export default function App() {
     if (detailWs.current) detailWs.current.close();
     detailWs.current = new WebSocket(url);
 
-    // Fetch Futures Data (Funding & Sentiment)
-    const fetchFuturesData = async () => {
+    // Initial Analysis & Futures Data
+    const updateStats = async () => {
+      setAiAnalysis(generateDetailedAIAnalysis(selectedCoin));
       try {
         const [fRes, lsRes] = await Promise.all([
           fetch(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${symbol}`),
           fetch(`https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=${symbol}&period=1h&limit=1`)
         ]);
         const [fData, lsData] = await Promise.all([fRes.json(), lsRes.json()]);
-        
         if (fData && fData.lastFundingRate) setFundingRate(parseFloat(fData.lastFundingRate) * 100);
         if (Array.isArray(lsData) && lsData.length > 0) setLongShortData(parseFloat(lsData[0].longShortRatio));
-      } catch (e) {
-        setFundingRate(null); setLongShortData(null);
-      }
+      } catch (e) {}
     };
-    fetchFuturesData();
+    updateStats();
+
+    // 30s Refresh Interval
+    const analysisTimer = setInterval(() => {
+      setAiAnalysis(generateDetailedAIAnalysis(selectedCoin));
+    }, 30000);
 
     detailWs.current.onmessage = (e) => {
       const data = JSON.parse(e.data);
@@ -293,7 +300,10 @@ export default function App() {
       }
     };
 
-    return () => { if (detailWs.current) { detailWs.current.close(); detailWs.current = null; } };
+    return () => { 
+      if (detailWs.current) { detailWs.current.close(); detailWs.current = null; }
+      clearInterval(analysisTimer);
+    };
   }, [selectedCoin]);
 
   useEffect(() => {
@@ -448,116 +458,226 @@ export default function App() {
         </div>
       )}
 
-      {/* Detay Overlay (Analiz Merkezi) */}
       {selectedCoin && (
-        <div className="fixed inset-0 z-[100] bg-[#030712] overflow-y-auto p-4 md:p-8 animate-in slide-in-from-bottom-12 duration-500">
-           <div className="max-w-7xl mx-auto">
-             <button onClick={() => setSelectedCoin(null)} className="mb-8 px-12 py-4 bg-white/5 border border-white/10 rounded-2xl text-cyan-400 font-extrabold hover:bg-cyan-500 hover:text-white transition-all shadow-2xl tracking-[0.2em] uppercase text-xs">← PİYASA TERMİNALİNE DÖN</button>
-             
-             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-                <div className="lg:col-span-2 space-y-8">
-                   <div className="bg-white/5 rounded-[3rem] border border-white/10 h-[600px] overflow-hidden glass shadow-2xl relative">
-                      <div className="absolute top-4 left-4 z-10 flex gap-2">
-                         <span className="bg-[#030712] text-[10px] font-black px-3 py-1 rounded-full text-cyan-400 border border-white/10 uppercase tracking-widest">{selectedCoin.symbol} CANLI TERMİNAL</span>
-                      </div>
-                      <AdvancedRealTimeChart symbol={`BINANCE:${selectedCoin.symbol}`} theme="dark" autosize locale="tr" toolbar_bg="#030712" />
-                   </div>
+        <div className="fixed inset-0 z-[150] bg-[#030712]/95 backdrop-blur-3xl flex items-center justify-center p-4 md:p-8 animate-in zoom-in-95 duration-500 overflow-y-auto">
+           <button onClick={() => setSelectedCoin(null)} className="fixed top-6 right-6 w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-all border border-white/20 z-[200]">✕</button>
+           
+           <div className="max-w-[1500px] w-full bg-white/5 border border-white/10 rounded-[3rem] glass shadow-2xl relative overflow-hidden flex flex-col h-full max-h-[90vh]">
+              {/* Terminal Navigation */}
+              <div className="p-6 border-b border-white/10 flex flex-wrap items-center justify-between gap-6 bg-white/[0.02]">
+                 <div className="flex items-center gap-6">
+                    <div className="w-14 h-14 bg-cyan-500 rounded-2xl flex items-center justify-center text-white font-black text-2xl italic shadow-2xl">{selectedCoin.symbol.charAt(0)}</div>
+                    <div>
+                       <h2 className="text-3xl font-black italic tracking-tighter text-white uppercase">{selectedCoin.symbol.replace('USDT', '')} <span className="text-cyan-500">PRO TERMİNAL</span></h2>
+                       <div className="flex items-center gap-2 mt-1">
+                          <div className="w-2 h-2 bg-cyan-500 rounded-full animate-ping" />
+                          <p className="text-[9px] text-gray-500 font-black tracking-widest uppercase">ZOR AI STRATEJİK ANALİZ v2.5</p>
+                       </div>
+                    </div>
+                 </div>
 
-                   {/* SENTIMENT & FUNDING DASHBOARD */}
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      <div className="bg-white/5 border border-white/10 p-10 rounded-[3rem] glass flex flex-col items-center">
-                         <h4 className="text-[10px] font-black text-cyan-400 uppercase tracking-[0.4em] mb-8 text-center w-full">LONG / SHORT RATIO (HESAP)</h4>
-                         <Chart 
-                            options={{
-                               chart: { type: 'radialBar', sparkline: { enabled: true } },
-                               plotOptions: {
-                                  radialBar: {
-                                     startAngle: -90, endAngle: 90,
-                                     track: { background: "#ffffff10", strokeWidth: '100%' },
-                                     dataLabels: {
-                                        name: { show: false },
-                                        value: { offsetLines: -2, fontSize: '30px', fontWeight: '900', color: '#fff', formatter: (val) => val.toFixed(2) }
-                                     }
-                                  }
-                               },
-                               fill: { colors: [longShortData > 1 ? '#22c55e' : '#ef4444'] },
-                               labels: ['Ratio'],
-                            }}
-                            series={[longShortData ? (longShortData / 3) * 100 : 50]} // Scale ratio to gauge
-                            type="radialBar"
-                            width={300}
-                         />
-                         <div className="mt-[-40px] text-center">
-                            <p className="text-sm font-black text-white uppercase tracking-widest">{longShortData ? `${longShortData.toFixed(2)}x` : 'YÜKLENİYOR'}</p>
-                            <p className="text-[9px] font-bold text-gray-500 uppercase mt-1">Piyasa Duyarlılığı</p>
-                         </div>
-                      </div>
+                 <nav className="flex bg-white/5 p-1 rounded-2xl border border-white/10 glass">
+                    {['chart', 'sentiment', 'orderbook'].map((tab) => (
+                       <button 
+                          key={tab}
+                          onClick={() => setModalTab(tab)}
+                          className={`px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${modalTab === tab ? 'bg-cyan-500 text-white shadow-xl' : 'text-gray-500 hover:bg-white/5 hover:text-white'}`}
+                       >
+                          {tab === 'chart' ? 'Grafik' : tab === 'sentiment' ? 'Al/Sat Analizi' : 'Emir Defteri'}
+                       </button>
+                    ))}
+                 </nav>
 
-                      <div className="bg-white/5 border border-white/10 p-10 rounded-[3rem] glass flex flex-col justify-center overflow-hidden relative">
-                         <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-cyan-500/5 blur-3xl" />
-                         <h4 className="text-[10px] font-black text-cyan-400 uppercase tracking-[0.4em] mb-6">FON PARASI (8S)</h4>
-                         <div className="flex items-center gap-6">
-                            <div className={`w-20 h-20 rounded-3xl flex items-center justify-center font-black text-xl shadow-2xl ${fundingRate > 0 ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>
-                               {fundingRate ? `${fundingRate.toFixed(4)}%` : '---'}
-                            </div>
-                            <div>
-                               <p className="text-xl font-black text-white italic tracking-tighter uppercase">{fundingRate > 0 ? 'Short Öder' : 'Long Öder'}</p>
-                               <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-1">Binance Futures Live Rate</p>
-                            </div>
-                         </div>
-                         <div className="mt-8 pt-8 border-t border-white/5">
-                            <p className="text-[11px] font-medium text-slate-400 italic">
-                               {fundingRate > 0.01 ? "⚠️ Yüksek pozitif fonlama; long pozisyonlar için maliyet artıyor, bir düzeltme gelebilir." : "✅ Stabil fonlama oranları piyasada dengeli bir kaldıraç kullanımına işaret ediyor."}
-                            </p>
-                         </div>
-                      </div>
-                   </div>
-                </div>
-               
-               <div className="space-y-8">
-                  <div className="bg-white/5 rounded-[3rem] border border-white/10 p-10 glass shadow-2xl h-full flex flex-col relative overflow-hidden">
-                     <div className="absolute -top-10 -right-10 w-40 h-40 bg-cyan-500/5 blur-3xl" />
-                     <header className="mb-10">
-                        <h2 className="text-5xl font-black italic tracking-tighter text-white mb-2 leading-none">{selectedCoin.symbol.replace('USDT', '')} <span className="text-cyan-400">ZOR AI</span></h2>
-                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.4em]">Stratejik Analiz Raporu v2.1</span>
-                     </header>
-                     
-                     <div className="grid grid-cols-2 gap-6 mb-10">
-                        <div className="bg-white/5 p-6 rounded-3xl border border-white/5 text-center shadow-inner">
-                           <span className="text-[10px] font-bold text-gray-600 uppercase block mb-2 tracking-widest">SİNYAL DURUMU</span>
-                           <span className={`text-xl font-black ${generateDetailedAIAnalysis(selectedCoin).color}`}>{generateDetailedAIAnalysis(selectedCoin).signal}</span>
-                        </div>
-                        <div className="bg-white/5 p-6 rounded-3xl border border-white/5 text-center shadow-inner">
-                           <span className="text-[10px] font-bold text-gray-600 uppercase block mb-2 tracking-widest">PİYASA MOMENTUMU</span>
-                           <span className="text-sm font-black text-white italic tracking-tighter">{generateDetailedAIAnalysis(selectedCoin).trend}</span>
-                        </div>
-                     </div>
+                 <div className="text-right">
+                    <p className="text-2xl font-black text-white font-mono tracking-tighter">${selectedCoin.price?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                    <p className={`text-[11px] font-black mt-1 ${selectedCoin.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                       {selectedCoin.change >= 0 ? '+' : ''}{selectedCoin.change}% (24S)
+                    </p>
+                 </div>
+              </div>
 
-                     <div className="flex-1">
-                        <h4 className="text-[10px] font-black text-cyan-400 uppercase tracking-[0.3em] mb-4">ZOR AI STRATEJİ YORUMU</h4>
-                        <p className="text-base font-semibold text-gray-200 leading-relaxed bg-white/5 p-8 rounded-[2rem] border-l-[8px] border-cyan-500 italic shadow-2xl">
-                          "{generateDetailedAIAnalysis(selectedCoin).comment}"
-                        </p>
-                        <div className="mt-8 p-4 bg-white/5 rounded-2xl">
-                           <p className="text-[10px] font-black tracking-widest text-cyan-400/50 uppercase text-center">{generateDetailedAIAnalysis(selectedCoin).indicators}</p>
-                        </div>
-                     </div>
+              <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+                 {/* Main Content Area */}
+                 <div className="flex-1 p-8 overflow-y-auto custom-scrollbar border-r border-white/10">
+                    {modalTab === 'chart' && (
+                       <div className="h-full min-h-[500px] rounded-[2rem] overflow-hidden border border-white/5 shadow-2xl animate-in zoom-in-95 duration-500">
+                          <AdvancedRealTimeChart symbol={`BINANCE:${selectedCoin.symbol}`} theme="dark" autosize locale="tr" hide_side_toolbar={false} />
+                       </div>
+                    )}
 
-                     <div className="mt-10">
-                        <button 
-                           onClick={() => {
+                    {modalTab === 'sentiment' && (
+                       <div className="space-y-10 animate-in fade-in slide-in-from-right-8 duration-500">
+                          {/* GRAFİTİ: AL/SAT BASKI GRAFİĞİ */}
+                          <div className="bg-white/5 border border-white/10 p-10 rounded-[3rem] glass relative overflow-hidden">
+                             <div className="absolute top-0 right-0 p-8 opacity-5">
+                                <span className="text-8xl font-black italic text-cyan-500 uppercase">SENTIMENT</span>
+                             </div>
+                             <h4 className="text-[10px] font-black text-cyan-400 uppercase tracking-[0.4em] mb-10">PİYASA BASKI DAĞILIMI (TAKER VOL)</h4>
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+                                <div>
+                                   <Chart 
+                                      options={{
+                                         chart: { type: 'bar', toolbar: { show: false } },
+                                         plotOptions: { bar: { borderRadius: 12, columnWidth: '55%', distributed: true } },
+                                         dataLabels: { enabled: false },
+                                         xaxis: { categories: ['ALIŞ GÜCÜ', 'SATIŞ GÜCÜ'], labels: { style: { colors: '#94a3b8', fontWeight: 900 } } },
+                                         yaxis: { show: false },
+                                         grid: { show: false },
+                                         colors: ['#22c55e', '#ef4444'],
+                                         tooltip: { theme: 'dark' }
+                                      }}
+                                      series={[{ name: 'Baskı Oranı', data: [selectedCoin.buyRatio || 50, 100 - (selectedCoin.buyRatio || 50)] }]}
+                                      type="bar"
+                                      height={300}
+                                   />
+                                </div>
+                                <div className="space-y-6">
+                                   <div className="bg-white/5 p-8 rounded-[2.5rem] border border-white/5 text-center">
+                                      <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">ANLIK DOMİNASYON</p>
+                                      <p className={`text-5xl font-black italic tracking-tighter ${selectedCoin.buyRatio > 50 ? 'text-green-400' : 'text-red-400'}`}>
+                                         %{selectedCoin.buyRatio?.toFixed(1)} {selectedCoin.buyRatio > 50 ? 'BOĞA' : 'AYI'}
+                                      </p>
+                                   </div>
+                                   <div className="bg-cyan-500/5 p-6 rounded-2xl border border-cyan-500/20 text-center">
+                                      <p className="text-[10px] font-black text-cyan-400 uppercase tracking-widest mb-2">FONLAMA (8S)</p>
+                                      <p className={`text-xl font-mono font-black ${fundingRate > 0 ? 'text-red-400' : 'text-green-400'}`}>{fundingRate ? `${fundingRate.toFixed(4)}%` : '---'}</p>
+                                   </div>
+                                </div>
+                             </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                             <div className="bg-white/5 border border-white/10 p-10 rounded-[3rem] glass flex flex-col items-center">
+                                <h4 className="text-[10px] font-black text-cyan-400 uppercase tracking-[0.4em] mb-6 text-center w-full">LONG / SHORT RATIO (HESAP)</h4>
+                                <Chart 
+                                   options={{
+                                      chart: { type: 'radialBar', sparkline: { enabled: true } },
+                                      plotOptions: {
+                                         radialBar: {
+                                            startAngle: -90, endAngle: 90,
+                                            track: { background: "#ffffff10", strokeWidth: '100%' },
+                                            dataLabels: {
+                                               name: { show: false },
+                                               value: { offsetLines: -2, fontSize: '30px', fontWeight: '900', color: '#fff', formatter: (val) => val.toFixed(2) }
+                                            }
+                                         }
+                                      },
+                                      fill: { colors: [longShortData > 1 ? '#22c55e' : '#ef4444'] },
+                                      labels: ['Ratio'],
+                                   }}
+                                   series={[longShortData ? (longShortData / 3) * 100 : 50]}
+                                   type="radialBar"
+                                   width={260}
+                                />
+                                <p className="text-xl font-black text-white uppercase tracking-widest mt-[-20px]">{longShortData ? `${longShortData.toFixed(2)}x` : '---'}</p>
+                             </div>
+
+                             <div className="bg-white/5 border border-white/10 p-10 rounded-[3rem] glass flex flex-col justify-center">
+                                <h4 className="text-[10px] font-black text-cyan-400 uppercase tracking-widest mb-6">STRATEJİK NOT</h4>
+                                <p className="text-sm text-slate-300 italic leading-relaxed font-medium">
+                                   {fundingRate > 0.01 
+                                     ? "⚠️ Yüksek pozitif fonlama; long pozisyonlar için maliyet artıyor, kısa vadeli bir kar satışı (flush) olasılığı takip edilmeli." 
+                                     : "✅ Fonlama oranları dengeli seyrediyor, piyasa mevcut trend yönünde rasyonel bir kaldıraçla ilerliyor."
+                                   }
+                                </p>
+                             </div>
+                          </div>
+                       </div>
+                    )}
+
+                    {modalTab === 'orderbook' && (
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-10 h-full animate-in fade-in slide-in-from-left-8 duration-500">
+                          <div className="bg-white/5 border border-white/10 p-8 rounded-[3rem] glass flex flex-col overflow-hidden">
+                             <h4 className="text-[10px] font-black text-cyan-400 uppercase tracking-widest mb-6">EMİR DEFTERİ GÖRÜNÜMÜ</h4>
+                             <div className="flex-1 overflow-hidden font-mono text-[11px] space-y-1">
+                                {orderBook.asks.map((a, i) => (
+                                   <div key={i} className="flex justify-between py-1 relative">
+                                      <div className="absolute inset-0 bg-red-500/5 origin-left" style={{ width: `${(parseFloat(a[1]) / Math.max(...orderBook.asks.map(x=>parseFloat(x[1])))) * 100}%` }} />
+                                      <span className="text-red-500 font-bold z-10">{parseFloat(a[0]).toFixed(selectedCoin.price < 1 ? 6 : 2)}</span>
+                                      <span className="text-gray-400 z-10">{parseFloat(a[1]).toFixed(3)}</span>
+                                   </div>
+                                ))}
+                                <div className="h-px bg-white/10 my-4" />
+                                {orderBook.bids.map((b, i) => (
+                                   <div key={i} className="flex justify-between py-1 relative">
+                                      <div className="absolute inset-0 bg-green-500/5 origin-left" style={{ width: `${(parseFloat(b[1]) / Math.max(...orderBook.bids.map(x=>parseFloat(x[1])))) * 100}%` }} />
+                                      <span className="text-green-400 font-bold z-10">{parseFloat(b[0]).toFixed(selectedCoin.price < 1 ? 6 : 2)}</span>
+                                      <span className="text-gray-400 z-10">{parseFloat(b[1]).toFixed(3)}</span>
+                                   </div>
+                                ))}
+                             </div>
+                          </div>
+
+                          <div className="bg-white/5 border border-white/10 p-8 rounded-[3rem] glass flex flex-col overflow-hidden">
+                             <h4 className="text-[10px] font-black text-cyan-400 uppercase tracking-widest mb-6">SON İŞLEM AKIŞI</h4>
+                             <div className="flex-1 overflow-y-auto no-scrollbar space-y-3">
+                                {recentTrades.map((tr) => (
+                                   <div key={tr.id} className="flex justify-between items-center bg-white/5 p-4 rounded-xl border border-white/5">
+                                      <span className={`text-sm font-black font-mono ${tr.side === 'buy' ? 'text-green-400' : 'text-red-500'}`}>{tr.price.toFixed(selectedCoin.price < 1 ? 6 : 2)}</span>
+                                      <span className="text-[10px] font-black text-slate-400">{tr.qty.toFixed(3)}</span>
+                                      <span className="text-[9px] font-bold text-gray-500">{tr.time}</span>
+                                   </div>
+                                ))}
+                             </div>
+                          </div>
+                       </div>
+                    )}
+                 </div>
+
+                 {/* Sidebar: Zor AI Analysis */}
+                 <div className="w-full lg:w-[400px] p-8 bg-white/[0.02] flex flex-col">
+                    <div className="mb-10 flex justify-between items-center">
+                       <h3 className="text-xl font-black italic text-white tracking-widest">ANALİZ RAPORU</h3>
+                       <div className="bg-cyan-500/20 px-3 py-1 rounded-lg border border-cyan-500/30 flex items-center gap-1.5">
+                          <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-pulse" />
+                          <span className="text-[8px] font-black text-cyan-400 tracking-[0.2em]">30S YENİLEME</span>
+                       </div>
+                    </div>
+
+                    <div className="space-y-6 flex-1 overflow-y-auto no-scrollbar">
+                       <div className="grid grid-cols-2 gap-4">
+                          <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 text-center">
+                             <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-2">SİNYAL</p>
+                             <p className={`text-lg font-black ${aiAnalysis?.color}`}>{aiAnalysis?.signal}</p>
+                          </div>
+                          <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 text-center">
+                             <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-2">DURUM</p>
+                             <p className="text-[11px] font-black text-white italic truncate uppercase">{aiAnalysis?.trend}</p>
+                          </div>
+                       </div>
+
+                       <div className="bg-white/5 border border-white/10 p-8 rounded-[2.5rem] glass shadow-2xl relative overflow-hidden">
+                          <div className="absolute top-0 right-0 p-4 opacity-10">
+                             <span className="text-4xl font-black italic text-cyan-500">AI</span>
+                          </div>
+                          <h4 className="text-[9px] font-black text-cyan-400 uppercase tracking-widest mb-4">STRATEJİK YORUM</h4>
+                          <p className="text-sm font-semibold text-slate-200 leading-relaxed italic animate-in fade-in duration-1000">
+                             "{aiAnalysis?.comment}"
+                          </p>
+                       </div>
+
+                       <div className="bg-cyan-500/10 p-6 rounded-2xl border border-cyan-500/20 text-center">
+                          <p className="text-[10px] font-black text-cyan-400 tracking-widest uppercase">{aiAnalysis?.indicators}</p>
+                       </div>
+                    </div>
+
+                    <div className="mt-10">
+                       <button 
+                          onClick={() => {
                              const target = prompt(`${selectedCoin.symbol} için hedef fiyat girin (USD):`);
                              if(target) {
-                               setAlerts([{ id: Date.now(), symbol: selectedCoin.symbol, target: parseFloat(target), type: 'ABOVE', active: true }, ...alerts]);
-                               alert("Fiyat Alarmı Eklendi. Ping sistemi aktif.");
+                                setAlerts([{ id: Date.now(), symbol: selectedCoin.symbol, target: parseFloat(target), type: 'ABOVE', active: true }, ...alerts]);
+                                playPing();
+                                alert("Fiyat Alarmı Kuruldu. Zoreks Ping sistemi aktif.");
                              }
-                           }}
-                           className="w-full bg-cyan-500 text-white font-black py-5 rounded-[2rem] shadow-[0_15px_40px_rgba(6,182,212,0.4)] hover:translate-y-[-2px] transition-all uppercase tracking-[0.2em] text-sm"
-                        >FİYAT ALARMI KUR (PING)</button>
-                     </div>
-                  </div>
-               </div>
-             </div>
+                          }}
+                          className="w-full bg-cyan-500 text-white font-black py-4 rounded-3xl shadow-lg hover:shadow-cyan-500/40 transition-all uppercase tracking-widest text-[11px]"
+                       >
+                          ALARM KUR (PING)
+                       </button>
+                    </div>
+                 </div>
+              </div>
            </div>
         </div>
       )}
