@@ -95,24 +95,24 @@ const TickerRow = React.memo(({ t, alerts, onSelect }) => {
        className={`group hover:bg-white/[0.08] transition-all duration-300 cursor-pointer ${flashClass}`} 
        onClick={() => onSelect(t)}
     >
-      <td className="px-10 py-10">
-        <div className="flex items-center gap-5">
-          <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 flex items-center justify-center text-cyan-400 font-black text-xl italic group-hover:bg-cyan-500 group-hover:text-white transition-all shadow-xl border border-white/5 relative">
+      <td className="px-4 md:px-10 py-6 md:py-10">
+        <div className="flex items-center gap-3 md:gap-5">
+          <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-cyan-500/10 flex items-center justify-center text-cyan-400 font-black text-lg md:text-xl italic group-hover:bg-cyan-500 group-hover:text-white transition-all shadow-xl border border-white/5 relative">
             {t.symbol.charAt(0)}
             {alerts.some(a => a.symbol === t.symbol && a.active) && (
-               <div className="absolute -top-2 -right-2 bg-cyan-500 w-5 h-5 rounded-full flex items-center justify-center text-[10px] animate-pulse border-2 border-[#030712] shadow-lg">🔔</div>
+               <div className="absolute -top-2 -right-2 bg-cyan-500 w-4 h-4 md:w-5 md:h-5 rounded-full flex items-center justify-center text-[8px] md:text-[10px] animate-pulse border-2 border-[#030712] shadow-lg">🔔</div>
             )}
           </div>
-          <p className="font-black text-2xl group-hover:text-cyan-400 transition-colors uppercase italic tracking-tighter">{t.symbol.replace('USDT', '')}</p>
+          <p className="font-black text-lg md:text-2xl group-hover:text-cyan-400 transition-colors uppercase italic tracking-tighter">{t.symbol.replace('USDT', '')}</p>
         </div>
       </td>
-      <td className="px-10 py-10">
-        <p className={`font-mono text-xl font-black tracking-tighter transition-colors duration-300 ${isRecentlyUpdated ? (t.status === 'up' ? 'text-green-400' : 'text-red-400') : 'text-white'}`}>
+      <td className="px-4 md:px-10 py-6 md:py-10 text-right md:text-left">
+        <p className={`font-mono text-base md:text-xl font-black tracking-tighter transition-colors duration-300 ${isRecentlyUpdated ? (t.status === 'up' ? 'text-green-400' : 'text-red-400') : 'text-white'}`}>
           ${t.price > 1 ? t.price.toLocaleString(undefined, { minimumFractionDigits: 2 }) : t.price.toFixed(6)}
         </p>
-        <p className="text-[10px] font-black text-cyan-500/60 uppercase mt-2 tracking-widest italic leading-none">HACİM: ${(t.volume/1000000).toFixed(2)}M USD</p>
+        <p className="text-[8px] md:text-[10px] font-black text-cyan-500/60 uppercase mt-1 md:mt-2 tracking-widest italic leading-none">HAC: ${(t.volume/1000000).toFixed(2)}M</p>
       </td>
-      <td className="px-10 py-10 min-w-[200px]">
+      <td className="px-4 md:px-10 py-6 md:py-10 min-w-[150px] md:min-w-[200px] hidden lg:table-cell">
         <div className="flex justify-between items-center mb-2">
            <span className="text-[10px] font-black text-green-400">%{buyRatio.toFixed(1)} AL</span>
            <span className="text-[10px] font-black text-red-500">%{sellRatio.toFixed(1)} SAT</span>
@@ -121,13 +121,13 @@ const TickerRow = React.memo(({ t, alerts, onSelect }) => {
            <div className="h-full bg-green-500 transition-all duration-500 shadow-[0_0_10px_rgba(34,197,94,0.4)]" style={{ width: `${buyRatio}%` }} />
         </div>
       </td>
-      <td className="px-10 py-10 text-right">
-        <div className={`inline-flex items-center font-black text-lg px-6 py-3 rounded-[1.5rem] shadow-2xl transition-all ${t.change >= 0 ? 'text-green-400 bg-green-500/10' : 'text-red-400 bg-red-500/10'}`}>
-          {t.change > 0 ? '▲' : '▼'} {Math.abs(t.change).toFixed(2)}%
+      <td className="px-4 md:px-10 py-6 md:py-10 text-right">
+        <div className={`inline-flex items-center font-black text-sm md:text-lg px-3 py-2 md:px-6 md:py-3 rounded-[1rem] md:rounded-[1.5rem] shadow-2xl transition-all ${t.change >= 0 ? 'text-green-400 bg-green-500/10' : 'text-red-400 bg-red-500/10'}`}>
+          {t.change > 0 ? '▲' : '▼'}{Math.abs(t.change).toFixed(2)}%
         </div>
       </td>
-      <td className="px-10 py-10 text-center">
-        <div className={`inline-block px-8 py-2.5 rounded-full text-[11px] font-black tracking-[0.25em] shadow-2xl border border-white/10 uppercase ${ai.bg} ${ai.color}`}>
+      <td className="px-4 md:px-10 py-6 md:py-10 text-center hidden md:table-cell">
+        <div className={`inline-block px-4 py-2 md:px-8 md:py-2.5 rounded-full text-[9px] md:text-[11px] font-black tracking-[0.1em] md:tracking-[0.25em] shadow-2xl border border-white/10 uppercase ${ai.bg} ${ai.color}`}>
           {ai.signal}
         </div>
       </td>
@@ -1475,7 +1475,7 @@ export default function App() {
                <h1 className="text-2xl md:text-4xl font-black italic tracking-tighter uppercase text-white leading-none">ZOREKS</h1>
                <div className="flex items-center gap-2 mt-1">
                   <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                  <span className="text-[8px] md:text-[9px] font-black text-gray-600 tracking-[0.3em] md:tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.9</span>
+                  <span className="text-[8px] md:text-[9px] font-black text-gray-600 tracking-[0.3em] md:tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.10</span>
                </div>
              </div>
           </div>
@@ -1593,14 +1593,14 @@ export default function App() {
            </div>
         ) : activeTab === 'all' || activeTab === 'altcoins' ? (
           <div className="bg-white/[0.01] rounded-2xl md:rounded-[3rem] border border-white/5 overflow-x-auto overflow-y-hidden shadow-2xl glass animate-in fade-in duration-700">
-            <table className="w-full text-left min-w-[800px]">
+            <table className="w-full text-left">
               <thead>
                 <tr className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-widest font-black bg-white/[0.05]">
-                  <th className="px-6 md:px-10 py-6 md:py-10">Kripto Varlık</th>
-                  <th className="px-6 md:px-10 py-6 md:py-10">Fiyat / Hacim (24S)</th>
-                  <th className="px-6 md:px-10 py-6 md:py-10">Al/Sat Oranı (%)</th>
-                  <th className="px-6 md:px-10 py-6 md:py-10 text-right">Momentum Skoru</th>
-                  <th className="px-6 md:px-10 py-6 md:py-10 text-center">Zor AI Stratejisi</th>
+                  <th className="px-4 md:px-10 py-6 md:py-10">Kripto Varlık</th>
+                  <th className="px-4 md:px-10 py-6 md:py-10 text-right md:text-left">Fiyat / Hacim</th>
+                  <th className="px-4 md:px-10 py-6 md:py-10 hidden lg:table-cell">Al/Sat Oranı (%)</th>
+                  <th className="px-4 md:px-10 py-6 md:py-10 text-right">Momentum</th>
+                  <th className="px-4 md:px-10 py-6 md:py-10 text-center hidden md:table-cell">AI Stratejisi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5 font-medium">
