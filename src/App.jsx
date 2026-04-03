@@ -49,6 +49,69 @@ const playPing = () => {
   } catch(e) {}
 };
 
+// Optimized Ticker Row for High-Performance Rendering
+const TickerRow = React.memo(({ t, alerts, onSelect }) => {
+  const ai = generateDetailedAIAnalysis(t);
+  const isRecentlyUpdated = Date.now() - (t.lastUpdate || 0) < 500;
+  const buyRatio = t.buyRatio || 50;
+  const sellRatio = 100 - buyRatio;
+  const flashClass = isRecentlyUpdated 
+    ? (t.status === 'up' ? 'bg-green-500/10' : t.status === 'down' ? 'bg-red-500/10' : '') 
+    : '';
+
+  return (
+    <tr 
+       className={`group hover:bg-white/[0.08] transition-all duration-300 cursor-pointer ${flashClass}`} 
+       onClick={() => onSelect(t)}
+    >
+      <td className="px-10 py-10">
+        <div className="flex items-center gap-5">
+          <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 flex items-center justify-center text-cyan-400 font-black text-xl italic group-hover:bg-cyan-500 group-hover:text-white transition-all shadow-xl border border-white/5 relative">
+            {t.symbol.charAt(0)}
+            {alerts.some(a => a.symbol === t.symbol && a.active) && (
+               <div className="absolute -top-2 -right-2 bg-cyan-500 w-5 h-5 rounded-full flex items-center justify-center text-[10px] animate-pulse border-2 border-[#030712] shadow-lg">🔔</div>
+            )}
+          </div>
+          <p className="font-black text-2xl group-hover:text-cyan-400 transition-colors uppercase italic tracking-tighter">{t.symbol.replace('USDT', '')}</p>
+        </div>
+      </td>
+      <td className="px-10 py-10">
+        <p className={`font-mono text-xl font-black tracking-tighter transition-colors duration-300 ${isRecentlyUpdated ? (t.status === 'up' ? 'text-green-400' : 'text-red-400') : 'text-white'}`}>
+          ${t.price > 1 ? t.price.toLocaleString(undefined, { minimumFractionDigits: 2 }) : t.price.toFixed(6)}
+        </p>
+        <p className="text-[10px] font-black text-cyan-500/60 uppercase mt-2 tracking-widest italic leading-none">HACİM: ${(t.volume/1000000).toFixed(2)}M USD</p>
+      </td>
+      <td className="px-10 py-10 min-w-[200px]">
+        <div className="flex justify-between items-center mb-2">
+           <span className="text-[10px] font-black text-green-400">%{buyRatio.toFixed(1)} AL</span>
+           <span className="text-[10px] font-black text-red-500">%{sellRatio.toFixed(1)} SAT</span>
+        </div>
+        <div className="h-1.5 w-full bg-red-500/20 rounded-full flex overflow-hidden border border-white/5 shadow-inner">
+           <div className="h-full bg-green-500 transition-all duration-500 shadow-[0_0_10px_rgba(34,197,94,0.4)]" style={{ width: `${buyRatio}%` }} />
+        </div>
+      </td>
+      <td className="px-10 py-10 text-right">
+        <div className={`inline-flex items-center font-black text-lg px-6 py-3 rounded-[1.5rem] shadow-2xl transition-all ${t.change >= 0 ? 'text-green-400 bg-green-500/10' : 'text-red-400 bg-red-500/10'}`}>
+          {t.change > 0 ? '▲' : '▼'} {Math.abs(t.change).toFixed(2)}%
+        </div>
+      </td>
+      <td className="px-10 py-10 text-center">
+        <div className={`inline-block px-8 py-2.5 rounded-full text-[11px] font-black tracking-[0.25em] shadow-2xl border border-white/10 uppercase ${ai.bg} ${ai.color}`}>
+          {ai.signal}
+        </div>
+      </td>
+    </tr>
+  );
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.t.price === nextProps.t.price &&
+    prevProps.t.change === nextProps.t.change &&
+    prevProps.t.volume === nextProps.t.volume &&
+    prevProps.t.lastUpdate === nextProps.t.lastUpdate &&
+    prevProps.alerts.length === nextProps.alerts.length
+  );
+});
+
 export default function App() {
   const [tickers, setTickers] = useState({});
   const [status, setStatus] = useState('Yükleniyor...');
@@ -399,7 +462,7 @@ export default function App() {
     if (activeTab === 'btc') result = result.filter(t => t.symbol === 'BTCUSDT');
     else if (activeTab === 'altcoins') result = result.filter(t => t.symbol !== 'BTCUSDT' && t.symbol !== 'ETHUSDT');
     if (searchTerm) result = result.filter(t => t.symbol.toLowerCase().includes(searchTerm.toLowerCase()));
-    return result.sort((a, b) => b.volume - a.volume).slice(0, 35);
+    return result.sort((a, b) => b.volume - a.volume);
   }, [tickers, activeTab, searchTerm]);
 
   if (showLogin) {
@@ -977,57 +1040,14 @@ export default function App() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5 font-medium">
-                {list.map((t) => {
-                  const ai = generateDetailedAIAnalysis(t);
-                  const isRecentlyUpdated = Date.now() - (t.lastUpdate || 0) < 500;
-                  const flashClass = isRecentlyUpdated 
-                    ? (t.status === 'up' ? 'bg-green-500/10' : t.status === 'down' ? 'bg-red-500/10' : '') 
-                    : '';
-                  
-                  const buyRatio = t.buyRatio || 50;
-                  const sellRatio = 100 - buyRatio;
-
-                  return (
-                    <tr key={t.symbol} className={`group hover:bg-white/[0.08] transition-all duration-300 cursor-pointer ${flashClass}`} onClick={() => setSelectedCoin(t)}>
-                      <td className="px-10 py-10">
-                        <div className="flex items-center gap-5">
-                          <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 flex items-center justify-center text-cyan-400 font-black text-xl italic group-hover:bg-cyan-500 group-hover:text-white transition-all shadow-xl border border-white/5 relative">
-                            {t.symbol.charAt(0)}
-                            {alerts.some(a => a.symbol === t.symbol && a.active) && (
-                               <div className="absolute -top-2 -right-2 bg-cyan-500 w-5 h-5 rounded-full flex items-center justify-center text-[10px] animate-pulse border-2 border-[#030712] shadow-lg">🔔</div>
-                            )}
-                          </div>
-                          <p className="font-black text-2xl group-hover:text-cyan-400 transition-colors uppercase italic tracking-tighter">{t.symbol.replace('USDT', '')}</p>
-                        </div>
-                      </td>
-                      <td className="px-10 py-10">
-                        <p className={`font-mono text-xl font-black tracking-tighter transition-colors duration-300 ${isRecentlyUpdated ? (t.status === 'up' ? 'text-green-400' : 'text-red-400') : 'text-white'}`}>
-                          ${t.price > 1 ? t.price.toLocaleString(undefined, { minimumFractionDigits: 2 }) : t.price.toFixed(6)}
-                        </p>
-                        <p className="text-[10px] font-black text-cyan-500/60 uppercase mt-2 tracking-widest italic leading-none">HACİM: ${(t.volume/1000000).toFixed(2)}M USD</p>
-                      </td>
-                      <td className="px-10 py-10 min-w-[200px]">
-                        <div className="flex justify-between items-center mb-2">
-                           <span className="text-[10px] font-black text-green-400">%{buyRatio.toFixed(1)} AL</span>
-                           <span className="text-[10px] font-black text-red-500">%{sellRatio.toFixed(1)} SAT</span>
-                        </div>
-                        <div className="h-1.5 w-full bg-red-500/20 rounded-full flex overflow-hidden border border-white/5 shadow-inner">
-                           <div className="h-full bg-green-500 transition-all duration-500 shadow-[0_0_10px_rgba(34,197,94,0.4)]" style={{ width: `${buyRatio}%` }} />
-                        </div>
-                      </td>
-                      <td className="px-10 py-10 text-right">
-                        <div className={`inline-flex items-center font-black text-lg px-6 py-3 rounded-[1.5rem] shadow-2xl transition-all ${t.change >= 0 ? 'text-green-400 bg-green-500/10' : 'text-red-400 bg-red-500/10'}`}>
-                          {t.change > 0 ? '▲' : '▼'} {Math.abs(t.change).toFixed(2)}%
-                        </div>
-                      </td>
-                      <td className="px-10 py-10 text-center">
-                        <div className={`inline-block px-8 py-2.5 rounded-full text-[11px] font-black tracking-[0.25em] shadow-2xl border border-white/10 uppercase ${ai.bg} ${ai.color}`}>
-                          {ai.signal}
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
+                {list.map((t) => (
+                   <TickerRow 
+                     key={t.symbol} 
+                     t={t} 
+                     alerts={alerts} 
+                     onSelect={setSelectedCoin} 
+                   />
+                ))}
               </tbody>
             </table>
           </div>
