@@ -320,7 +320,7 @@ export default function App() {
       localStorage.setItem('zoreks_user', JSON.stringify(enhancedUser));
       setShowLogin(false);
     } else {
-      alert("Hatalı kullanıcı adı veya şifre. (v4.0.1)");
+      alert("Hatalı kullanıcı adı veya şifre. (v4.0.2)");
     }
   };
 
@@ -438,6 +438,15 @@ export default function App() {
     localStorage.setItem('zoreks_user', JSON.stringify(updatedUser));
     setAccounts(accounts.map(acc => acc.username === user.username ? updatedUser : acc));
     addToast("🗑️ EMİR İPTAL EDİLDİ", "info");
+  };
+
+  const cancelAllOrders = (symbol) => {
+    const updatedOrders = user.orders.filter(o => o.symbol !== symbol || o.status !== 'PENDING');
+    const updatedUser = { ...user, orders: updatedOrders };
+    setUser(updatedUser);
+    localStorage.setItem('zoreks_user', JSON.stringify(updatedUser));
+    setAccounts(accounts.map(acc => acc.username === user.username ? updatedUser : acc));
+    addToast(`🗑️ TÜM ${symbol} EMİRLERİ İPTAL EDİLDİ`, "info");
   };
 
   // ORDER MATCHING ENGINE
@@ -1185,7 +1194,17 @@ export default function App() {
                                     )}
 
                                     <div className="mt-10 pt-6 border-t border-white/5">
-                                       <h5 className="text-[10px] font-black text-gray-500 mb-4 tracking-[0.3em] uppercase">AÇIK EMİRLER</h5>
+                                       <div className="flex justify-between items-center mb-4">
+                                          <h5 className="text-[10px] font-black text-gray-500 tracking-[0.3em] uppercase">AÇIK EMİRLER</h5>
+                                          {user?.orders?.filter(o => o.symbol === liveCoin.symbol && o.status === 'PENDING').length > 0 && (
+                                             <button 
+                                                onClick={() => cancelAllOrders(liveCoin.symbol)}
+                                                className="text-[8px] font-black text-red-400 hover:text-red-500 uppercase tracking-widest"
+                                             >
+                                                TÜMÜNÜ İPTAL ET
+                                             </button>
+                                          )}
+                                       </div>
                                        <div className="space-y-3 max-h-[200px] overflow-y-auto no-scrollbar">
                                           {user?.orders?.filter(o => o.symbol === liveCoin.symbol && o.status === 'PENDING').map(order => (
                                              <div key={order.id} className="flex items-center justify-between bg-white/5 p-4 rounded-xl border border-white/5">
@@ -1441,7 +1460,7 @@ export default function App() {
             <h1 className="text-4xl font-black italic tracking-tighter uppercase text-white leading-none">ZOREKS</h1>
             <div className="flex items-center gap-2 mt-1">
                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-               <span className="text-[9px] font-black text-gray-600 tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.1</span>
+               <span className="text-[9px] font-black text-gray-600 tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.2</span>
             </div>
           </div>
         </div>
