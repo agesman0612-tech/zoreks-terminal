@@ -398,8 +398,8 @@ export default function App() {
 
     const symbol = selectedCoin.symbol;
     const s_low = symbol.toLowerCase();
-    // bookTicker for millisecond price updates, trade for sentiment
-    const url = `wss://stream.binance.com:9443/ws/${s_low}@bookTicker/${s_low}@trade`;
+    // bookTicker for millisecond price updates, trade for sentiment, depth for order book
+    const url = `wss://stream.binance.com:9443/ws/${s_low}@bookTicker/${s_low}@trade/${s_low}@depth10@100ms`;
     
     if (detailWs.current) detailWs.current.close();
     detailWs.current = new WebSocket(url);
@@ -452,7 +452,6 @@ export default function App() {
       const data = JSON.parse(e.data);
       
       if (data.e === 'bookTicker') {
-        // ULTRA-SYNC: Update price from bookTicker (Bid/Ask mid-price or best price)
         const bestPrice = (parseFloat(data.b) + parseFloat(data.a)) / 2;
         setTickers(prev => ({
           ...prev,
@@ -462,20 +461,20 @@ export default function App() {
             lastUpdate: Date.now()
           }
         }));
+      } else if (data.bids && data.asks) {
+        // DEPTH-SYNC: Handle @depth10@100ms (partial snapshots don't have 'e' field)
+        setOrderBook({ bids: data.bids.slice(0, 10), asks: data.asks.slice(0, 10) });
       } else if (data.e === 'trade') {
         const price = parseFloat(data.p);
         const qty = parseFloat(data.q);
-        const isBuyerMaker = data.m; // true if sell, false if buy
+        const isBuyerMaker = data.m; 
         const side = isBuyerMaker ? 'sell' : 'buy';
 
         const newTrade = { id: data.t, price, qty, time: new Date(data.T).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), side };
         setRecentTrades(prev => [newTrade, ...prev].slice(0, 15));
 
-        // 30s MOMENTUM: Add to buffer and calculate sentiment
         const now = Date.now();
         tradeBuffer.current.push({ price, qty, side, time: now });
-        
-        // Remove trades older than 30s
         tradeBuffer.current = tradeBuffer.current.filter(t => now - t.time <= 30000);
         
         const buyVol = tradeBuffer.current.filter(t => t.side === 'buy').reduce((sum, t) => sum + (t.price * t.qty), 0);
