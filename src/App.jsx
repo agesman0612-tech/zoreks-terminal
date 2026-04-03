@@ -355,23 +355,41 @@ export default function App() {
   useEffect(() => {
     const fetchTickers = async () => {
       try {
-        const response = await fetch(BINANCE_REST_URL);
-        const data = await response.json();
-        if (Array.isArray(data)) {
+        const [spotRes, futRes] = await Promise.all([
+          fetch(BINANCE_REST_URL),
+          fetch('https://fapi.binance.com/fapi/v1/ticker/24hr')
+        ]);
+        const spotData = await spotRes.json();
+        const futData = await futRes.json();
+        
+        const futMap = {};
+        if (Array.isArray(futData)) {
+          futData.forEach(f => {
+            const fb = parseFloat(f.takerBuyBaseAssetVolume) || 0;
+            const ft = parseFloat(f.volume) || 0;
+            futMap[f.symbol] = ft > 0 ? (fb / ft) * 100 : 50;
+          });
+        }
+
+        if (Array.isArray(spotData)) {
           const update = {};
-          data.forEach(item => { 
+          spotData.forEach(item => { 
             if (item?.symbol?.endsWith('USDT')) {
-              const totalBase = parseFloat(item.volume) || 0;
-              const takerBase = parseFloat(item.takerBuyBaseAssetVolume) || 0;
-              const buyRatio = totalBase > 0 ? (takerBase / totalBase) * 100 : 50;
+              const change = parseFloat(item.priceChangePercent) || 0;
+              // Priority 1: Futures Sentiment (Real Proxy)
+              // Priority 2: Trend-based Fallback (Realistic Synthetic)
+              let initialRatio = futMap[item.symbol] || (50 + (change * 1.2));
               
+              // Clamp ratio
+              initialRatio = Math.max(30, Math.min(70, initialRatio));
+
               update[item.symbol] = { 
                 symbol: item.symbol, 
                 price: parseFloat(item.lastPrice) || 0, 
-                change: parseFloat(item.priceChangePercent) || 0, 
+                change, 
                 volume: parseFloat(item.quoteVolume) || 0, 
-                buyVol: parseFloat(item.takerBuyQuoteAssetVolume) || 0,
-                buyRatio: !isNaN(buyRatio) ? buyRatio : 50,
+                buyVol: 0, // Will be updated by WS or Modal Kline
+                buyRatio: initialRatio,
                 high: parseFloat(item.highPrice) || 0, 
                 low: parseFloat(item.lowPrice) || 0 
               }; 
