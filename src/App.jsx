@@ -687,16 +687,36 @@ export default function App() {
                                 <div>
                                    <Chart 
                                       options={{
-                                         chart: { type: 'bar', toolbar: { show: false } },
-                                         plotOptions: { bar: { borderRadius: 12, columnWidth: '55%', distributed: true } },
-                                         dataLabels: { enabled: false },
-                                         xaxis: { categories: ['ALIŞ GÜCÜ', 'SATIŞ GÜCÜ'], labels: { style: { colors: '#94a3b8', fontWeight: 900 } } },
+                                         chart: { type: 'bar', toolbar: { show: false }, animations: { enabled: true, easing: 'easeinout', speed: 800 } },
+                                         plotOptions: { 
+                                           bar: { 
+                                             borderRadius: 12, 
+                                             columnWidth: '55%', 
+                                             distributed: true,
+                                             dataLabels: { position: 'top' }
+                                           } 
+                                         },
+                                         dataLabels: { 
+                                           enabled: true, 
+                                           formatter: (val) => `$${(val / 1000000).toFixed(2)}M`,
+                                           offsetY: -30,
+                                           style: { fontSize: '12px', fontWeight: 900, colors: ['#fff'] }
+                                         },
+                                         xaxis: { 
+                                           categories: ['ALIŞ (USDT)', 'SATIŞ (USDT)'], 
+                                           labels: { style: { colors: '#94a3b8', fontWeight: 900 } },
+                                           axisBorder: { show: false }
+                                         },
                                          yaxis: { show: false },
                                          grid: { show: false },
                                          colors: ['#22c55e', '#ef4444'],
-                                         tooltip: { theme: 'dark' }
+                                         tooltip: { 
+                                           theme: 'dark',
+                                           y: { formatter: (val) => `$${val.toLocaleString()}` }
+                                         },
+                                         legend: { show: false }
                                       }}
-                                      series={[{ name: 'Baskı Oranı', data: [selectedCoin.buyRatio || 50, 100 - (selectedCoin.buyRatio || 50)] }]}
+                                      series={[{ name: 'Hacim', data: [selectedCoin.buyVol || 0, (selectedCoin.volume || 0) - (selectedCoin.buyVol || 0)] }]}
                                       type="bar"
                                       height={300}
                                    />
