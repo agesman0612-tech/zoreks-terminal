@@ -895,11 +895,10 @@ export default function App() {
       {selectedCoin && (() => {
         const liveCoin = tickers[selectedCoin.symbol] || selectedCoin;
         return (
-        <div className="fixed inset-0 z-[150] bg-[#030712]/95 backdrop-blur-3xl flex items-center justify-center p-4 md:p-8 animate-in zoom-in-95 duration-500 overflow-y-auto">
-           <button onClick={() => setSelectedCoin(null)} className="fixed top-6 right-6 w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-all border border-white/20 z-[200]">✕</button>
+        <div className="fixed inset-0 z-[150] bg-[#030712]/95 backdrop-blur-3xl flex items-center justify-center p-2 md:p-8 animate-in zoom-in-95 duration-500 overflow-y-auto">
+           <button onClick={() => setSelectedCoin(null)} className="fixed top-4 right-4 md:top-6 md:right-6 w-10 h-10 md:w-12 md:h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-all border border-white/20 z-[200]">✕</button>
            
-           <div className="max-w-[1500px] w-full bg-white/5 border border-white/10 rounded-[3rem] glass shadow-2xl relative overflow-hidden flex flex-col h-full max-h-[90vh]">
-              {/* Terminal Navigation */}
+           <div className="w-full max-w-7xl mx-auto min-h-[90vh] bg-[#030712] border border-white/5 rounded-3xl md:rounded-[4rem] flex flex-col relative overflow-hidden shadow-2xl mt-12 md:mt-0">
               <div className="p-6 border-b border-white/10 flex flex-wrap items-center justify-between gap-6 bg-white/[0.02]">
                  <div className="flex items-center gap-6">
                     <div className="w-14 h-14 bg-cyan-500 rounded-2xl flex items-center justify-center text-white font-black text-2xl italic shadow-2xl">{liveCoin.symbol.charAt(0)}</div>
@@ -1476,7 +1475,7 @@ export default function App() {
                <h1 className="text-2xl md:text-4xl font-black italic tracking-tighter uppercase text-white leading-none">ZOREKS</h1>
                <div className="flex items-center gap-2 mt-1">
                   <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                  <span className="text-[8px] md:text-[9px] font-black text-gray-600 tracking-[0.3em] md:tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.8</span>
+                  <span className="text-[8px] md:text-[9px] font-black text-gray-600 tracking-[0.3em] md:tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.9</span>
                </div>
              </div>
           </div>
@@ -1520,10 +1519,10 @@ export default function App() {
         </div>
       </header>
 
-      <main className="p-8 max-w-7xl mx-auto min-h-[85vh]">
+      <main className="p-4 md:p-8 max-w-7xl mx-auto min-h-[85vh]">
         
         {/* Market Pulse Bar */}
-         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 animate-in slide-in-from-top duration-700">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-8 md:mb-12 animate-in slide-in-from-top duration-700">
             <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 glass group hover:bg-white/[0.08] transition-all relative overflow-hidden">
                <div className="absolute top-0 right-0 p-4 opacity-10">
                   <div className="w-12 h-12 rounded-full border-4 border-cyan-500 border-t-transparent animate-spin" />
@@ -1593,15 +1592,15 @@ export default function App() {
               </div>
            </div>
         ) : activeTab === 'all' || activeTab === 'altcoins' ? (
-          <div className="bg-white/[0.01] rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl glass animate-in fade-in duration-700">
-            <table className="w-full text-left">
+          <div className="bg-white/[0.01] rounded-2xl md:rounded-[3rem] border border-white/5 overflow-x-auto overflow-y-hidden shadow-2xl glass animate-in fade-in duration-700">
+            <table className="w-full text-left min-w-[800px]">
               <thead>
-                <tr className="text-[10px] text-gray-500 uppercase tracking-widest font-black bg-white/[0.05]">
-                  <th className="px-10 py-10">Kripto Varlık</th>
-                  <th className="px-10 py-10">Fiyat / Hacim (24S)</th>
-                  <th className="px-10 py-10">Al/Sat Oranı (%)</th>
-                  <th className="px-10 py-10 text-right">Momentum Skoru</th>
-                  <th className="px-10 py-10 text-center">Zor AI Stratejisi</th>
+                <tr className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-widest font-black bg-white/[0.05]">
+                  <th className="px-6 md:px-10 py-6 md:py-10">Kripto Varlık</th>
+                  <th className="px-6 md:px-10 py-6 md:py-10">Fiyat / Hacim (24S)</th>
+                  <th className="px-6 md:px-10 py-6 md:py-10">Al/Sat Oranı (%)</th>
+                  <th className="px-6 md:px-10 py-6 md:py-10 text-right">Momentum Skoru</th>
+                  <th className="px-6 md:px-10 py-6 md:py-10 text-center">Zor AI Stratejisi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5 font-medium">
