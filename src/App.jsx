@@ -1460,13 +1460,13 @@ export default function App() {
             <h1 className="text-4xl font-black italic tracking-tighter uppercase text-white leading-none">ZOREKS</h1>
             <div className="flex items-center gap-2 mt-1">
                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-               <span className="text-[9px] font-black text-gray-600 tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.3</span>
+               <span className="text-[9px] font-black text-gray-600 tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.4</span>
             </div>
           </div>
         </div>
 
         <nav className="flex bg-white/5 p-1.5 rounded-[1.5rem] border border-white/10 glass shadow-2xl overflow-x-auto no-scrollbar">
-          {['all', 'altcoins', 'haberler', 'yorumlar', 'alarms', 'admin'].map((tab) => {
+          {['all', 'altcoins', 'haberler', 'alarms', 'admin'].map((tab) => {
             if (tab === 'admin' && user?.role !== 'admin') return null;
             return (
               <button 
@@ -1474,7 +1474,7 @@ export default function App() {
                 onClick={() => setActiveTab(tab)} 
                 className={`px-4 md:px-8 py-2 md:py-3 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase transition-all tracking-tighter whitespace-nowrap flex items-center gap-2 md:gap-3 ${activeTab === tab ? 'bg-cyan-500 text-white shadow-2xl scale-105' : 'text-gray-500 hover:text-white'}`}
               >
-                {tab === 'all' ? 'Tümü' : tab === 'altcoins' ? 'Altcoin Paketi' : tab === 'haberler' ? 'Dünya Gündemi' : tab === 'yorumlar' ? 'Topluluk' : tab === 'alarms' ? 'Alarmlarım' : 'Yönetim'}
+                {tab === 'all' ? 'Tümü' : tab === 'altcoins' ? 'Altcoin Paketi' : tab === 'haberler' ? 'Dünya Gündemi' : tab === 'alarms' ? 'Alarmlarım' : 'Yönetim'}
               </button>
             );
           })}
@@ -1580,82 +1580,14 @@ export default function App() {
                            </div>
                            <button 
                              onClick={() => setAlerts(alerts.filter(x => x.id !== a.id))}
-                             className="text-gray-600 hover:text-red-500 font-black text-lg p-2 transition-all"
+                          className="text-gray-600 hover:text-red-500 font-black text-lg p-2 transition-all"
                            >✕</button>
                         </div>
                       ))
                    )}
-                </div>
-             </div>
-          </div>
-        ) : activeTab === 'yorumlar' ? (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 animate-in fade-in duration-700">
-            <div className="lg:col-span-2 space-y-6">
-               {/* POST COMMENT FORM */}
-               <div className="bg-white/5 border border-white/10 p-8 rounded-[3rem] glass shadow-2xl relative overflow-hidden group">
-                  <div className="absolute -top-10 -right-10 w-40 h-40 bg-cyan-500/5 blur-3xl group-hover:bg-cyan-500/10 transition-all" />
-                  <h3 className="text-xl font-black italic text-white mb-6 uppercase tracking-widest">STRATEJİK YORUMUNUZU PAYLAŞIN</h3>
-                  <form onSubmit={addComment} className="space-y-6">
-                     <textarea 
-                        placeholder="Piyasa beklentinizi buraya yazın..."
-                        className="w-full bg-white/5 border border-white/10 rounded-[2rem] px-8 py-6 outline-none focus:border-cyan-500/50 text-white font-bold transition-all min-h-[150px] resize-none text-[15px]"
-                        value={commentInput}
-                        onChange={(e) => setCommentInput(e.target.value)}
-                     />
-                     <div className="flex flex-wrap items-center justify-between gap-6">
-                        <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10 glass">
-                           {['Bullish', 'Bearish'].map((s) => (
-                             <button 
-                               key={s} 
-                               type="button"
-                               onClick={() => setCommentSentiment(s)}
-                               className={`px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${commentSentiment === s ? (s === 'Bullish' ? 'bg-green-500 text-white' : 'bg-red-500 text-white') : 'text-gray-500 hover:text-white'}`}
-                             >
-                               {s === 'Bullish' ? 'BOĞA (AL)' : 'AYI (SAT)'}
-                             </button>
-                           ))}
-                        </div>
-                        <button type="submit" className="px-12 py-4 bg-cyan-500 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-cyan-400 transition-all hover:scale-105 active:scale-95 shadow-2xl shadow-cyan-500/20">PAYLAŞ</button>
-                     </div>
-                  </form>
-               </div>
-
-               {/* COMMENTS FEED */}
-               <div className="space-y-6">
-                 {comments.map((c) => (
-                   <div key={c.id} className="bg-white/5 border border-white/10 p-8 rounded-[2.5rem] glass shadow-xl hover:bg-white/[0.08] transition-all relative group">
-                      <div className="flex items-center justify-between mb-4">
-                         <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 bg-cyan-500/20 rounded-full flex items-center justify-center text-cyan-400 font-black italic">{c.user.charAt(0)}</div>
-                            <span className="font-black text-white italic tracking-tighter uppercase">{c.user}</span>
-                            <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest">{c.time} ÖNCE</span>
-                         </div>
-                         <span className={`text-[9px] font-black px-4 py-1.5 rounded-full border ${c.sentiment === 'Bullish' ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-red-500/10 border-red-500/30 text-red-500'}`}>
-                           {c.sentiment.toUpperCase()}
-                         </span>
-                      </div>
-                      <p className="text-[15px] font-medium text-slate-300 leading-relaxed italic">"{c.text}"</p>
-                      {user?.role === 'admin' && (
-                        <div className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
-                           <button onClick={() => banUser(c.user)} className="bg-red-500/20 p-2 rounded-lg text-red-500 hover:bg-red-500 hover:text-white transition-all text-[8px] font-black uppercase">BANLA</button>
-                           <button onClick={() => deleteComment(c.id)} className="bg-white/10 p-2 rounded-lg text-white hover:bg-red-500 transition-all text-xs font-black">✕</button>
-                        </div>
-                      )}
-                   </div>
-                 ))}
-               </div>
-            </div>
-            <div className="space-y-8">
-               <div className="bg-cyan-500/5 border border-cyan-500/20 p-10 rounded-[3rem] glass">
-                  <h3 className="text-xl font-black italic text-white mb-6 uppercase tracking-widest">TOPLULUK KURALLARI</h3>
-                  <ul className="space-y-4 text-xs font-bold text-slate-400 uppercase tracking-widest leading-loose">
-                     <li className="flex gap-3"><span className="text-cyan-500">▶</span> Manipülasyon yapmak yasaktır.</li>
-                     <li className="flex gap-3"><span className="text-cyan-500">▶</span> Saygılı analiz paylaşımı şarttır.</li>
-                     <li className="flex gap-3"><span className="text-cyan-500">▶</span> Reklam içerikleri anında banlanır.</li>
-                  </ul>
-               </div>
-            </div>
-          </div>
+                 </div>
+              </div>
+           </div>
         ) : activeTab === 'all' || activeTab === 'altcoins' ? (
           <div className="bg-white/[0.01] rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl glass animate-in fade-in duration-700">
             <table className="w-full text-left">
