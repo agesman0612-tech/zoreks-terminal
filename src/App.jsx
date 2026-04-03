@@ -1,0 +1,829 @@
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { AdvancedRealTimeChart } from "react-ts-tradingview-widgets";
+import Chart from 'react-apexcharts';
+
+const BINANCE_WS_URL = 'wss://stream.binance.com:9443/ws/!ticker@arr';
+const BINANCE_REST_URL = 'https://api.binance.com/api/v3/ticker/24hr';
+
+// Zor AI - Ultra Stratejik Analiz Motoru (Profesyonel Raporlama)
+const generateDetailedAIAnalysis = (coin) => {
+  const { change, volume, price, high, low } = coin;
+  let signal = "NÖTR / BEKLE";
+  let rsiMock = 50 + (change * 2.8); if (rsiMock > 98) rsiMock = 99; if (rsiMock < 2) rsiMock = 1;
+  let trend = "AKÜMÜLASYON";
+  let color = "text-gray-400";
+  let bg = "bg-gray-500/10";
+  
+  const sup = (price * 0.985).toFixed(price > 1 ? 2 : 6);
+  const res = (price * 1.025).toFixed(price > 1 ? 2 : 6);
+
+  if (change > 7) { 
+    signal = "AGRESİF AL / LONG"; trend = "PARABOLİK YÜKSELİŞ"; color = "text-green-400"; bg = "bg-green-500/20"; 
+  } else if (change > 2.5) { 
+    signal = "STRATEJİK AL"; trend = "POZİTİF MOMENTUM"; color = "text-green-300"; bg = "bg-green-400/10"; 
+  } else if (change < -7) { 
+    signal = "ACİL SAT / SHORT"; trend = "PANİK SATIŞI"; color = "text-red-500"; bg = "bg-red-600/20"; 
+  } else if (change < -2.5) { 
+    signal = "STRATEJİK SAT"; trend = "NEGATİF BASKI"; color = "text-red-400"; bg = "bg-red-500/10"; 
+  }
+
+  const commentary = `ZOREKS Zor AI STRATEJİ RAPORU: Mevcut parite analizinde ${trend} yapısı belirginleşmiş durumda. Fiyatın ${price.toLocaleString()} $ seviyesindeki seyri, teknik indikatörlerde (RSI: ${rsiMock.toFixed(0)}) ${change > 0 ? "aşırı alım bölgesine yakınsama" : "aşırı satış doygunluğu"} sinyali veriyor. Alt destek noktası ${sup} $ olarak belirlenirken, ${res} $ seviyesi üzerindeki kalıcılıklar yeni bir trend başlatabilir. Mevcut hacim (${(volume/1000000).toFixed(2)}M) piyasa yapıcı iştahının ${change > 0 ? "yüksek" : "düşük"} olduğunu kanıtlıyor. ${signal} pozisyonu korunmalı, stop-loss seviyeleri güncellenmelidir.`;
+
+  return { signal, trend, rsiMock, color, bg, 
+    indicators: `RSI-14: ${rsiMock.toFixed(0)} | VOL: ${(volume/1000000).toFixed(2)}M | ATR-24: %${Math.abs(change).toFixed(2)}`,
+    comment: commentary
+  };
+};
+
+// Web Audio API Ping
+const playPing = () => {
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    oscillator.connect(gainNode); gainNode.connect(audioCtx.destination);
+    oscillator.type = 'sine'; oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
+    gainNode.gain.setValueAtTime(0.5, audioCtx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+    oscillator.start(); oscillator.stop(audioCtx.currentTime + 0.4);
+  } catch(e) {}
+};
+
+export default function App() {
+  const [tickers, setTickers] = useState({});
+  const [status, setStatus] = useState('Yükleniyor...');
+  const [activeTab, setActiveTab] = useState('altcoins');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCoin, setSelectedCoin] = useState(null);
+  const [selectedNews, setSelectedNews] = useState(null);
+  const [orderBook, setOrderBook] = useState({ bids: [], asks: [] });
+  const [recentTrades, setRecentTrades] = useState([]);
+  const [fundingRate, setFundingRate] = useState(null);
+  const [longShortData, setLongShortData] = useState(null);
+  const detailWs = useRef(null);
+
+  // AUTH & PERSISTENCE
+  const [user, setUser] = useState(JSON.parse(localStorage.getItem('zoreks_user')) || null);
+  const [showLogin, setShowLogin] = useState(!localStorage.getItem('zoreks_user'));
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [loginForm, setLoginForm] = useState({ username: '', email: '', password: '' });
+
+  // COMMUNITY & ADMIN DATA
+  const [comments, setComments] = useState(JSON.parse(localStorage.getItem('zoreks_comments')) || [
+    { id: 1, user: "Balina", text: "BTC 70k hedefim rasyonel bir teknik beklenti.", time: "2 dk", sentiment: "Bullish" },
+    { id: 2, user: "Ayı", text: "Makroekonomik veriler baskıyı artırabilir.", time: "5 dk", sentiment: "Bearish" },
+  ]);
+  const [bannedUsers, setBannedUsers] = useState(JSON.parse(localStorage.getItem('zoreks_bans')) || []);
+  const [alerts, setAlerts] = useState(JSON.parse(localStorage.getItem('zoreks_alerts')) || []);
+  const [news, setNews] = useState([
+    { 
+      id: 1, 
+      title: "Drift Protocol'de 280 Milyon Dolarlık 'Admin' Yetkisi İstismarı Saptandı.", 
+      time: "1 SAAT", 
+      source: "GÜVENLİK", 
+      sourceName: "Drift Official", 
+      sourceUrl: "https://x.com/DriftProtocol", 
+      impact: "YÜKSEK",
+      sentiment: "BEARISH",
+      summary: "Solana tabanlı Drift Protocol, admin yetkilerinin ele geçirilmesi sonucu 280 milyon doların üzerinde kayıp yaşadı. Ekip, 'durable nonce' mekanizmasının suistimal edildiğini ve saldırının Kuzey Kore bağlantılı gruplarca gerçekleştirilmiş olabileceğini açıkladı. Platformda işlemler geçici olarak durduruldu.",
+      strategicTake: "DeFi protokollerinde yönetici anahtarlarının (admin keys) güvenliği hala en zayıf halka. SOL ekosistemindeki likidite geçici olarak sarsılabilir." 
+    },
+    { 
+      id: 2, 
+      title: "Wormhole (W) Dev Token Kilidi Açılışı: 1.28 Milyar Token Piyasaya Giriyor.", 
+      time: "2 SAAT", 
+      source: "ANALİZ", 
+      sourceName: "CoinMarketCap", 
+      sourceUrl: "https://coinmarketcap.com/currencies/wormhole/", 
+      impact: "YÜKSEK",
+      sentiment: "BEARISH",
+      summary: "Wormhole ekosistemi için bugün kritik bir dönüm noktası. Toplam arzın %28'ine denk gelen 1.28 milyar W token, erken dönem yatırımcıları ve katkı sağlayanlar için serbest bırakıldı. Piyasada ciddi bir satış baskısı ve volatilite bekleniyor.",
+      strategicTake: "Böylesine büyük kilit açılışları (unlocks) genellikle 'sell the news' etkisi yaratır. Fiyat istikrarı için yeni likidite girişleri şart."
+    },
+    { 
+      id: 3, 
+      title: "Avustralya'da 'Dijital Varlıklar Çerçeve Tasarısı 2025' Yasalaştı.", 
+      time: "4 SAAT", 
+      source: "REGÜLASYON", 
+      sourceName: "Gov.au", 
+      sourceUrl: "https://www.aph.gov.au/Parliamentary_Business/Bills_Legislation", 
+      impact: "ORTA",
+      sentiment: "BULLISH",
+      summary: "Avustralya Parlamentosu, kripto borsaları ve saklama kuruluşları için lisans zorunluluğu getiren kapsamlı yasa tasarısını resmen kabul etti. Bu adım, kurumsal yatırımcıların bölgeye girişini hızlandıracak bir hukuki zemin oluşturuyor.",
+      strategicTake: "Düzenleme (regulation) kısa vadede kısıtlayıcı görünse de, uzun vadede piyasa meşruiyeti ve güveni için temel taştır." 
+    },
+    { 
+      id: 4, 
+      title: "ABD CLARITY Yasası: Stablecoin Faiz Getirileri İçin Yol Haritası Netleşiyor.", 
+      time: "6 SAAT", 
+      source: "FİNANS", 
+      sourceName: "Coinbase Blog", 
+      sourceUrl: "https://www.coinbase.com/blog", 
+      impact: "ORTA",
+      sentiment: "BULLISH",
+      summary: "ABD'de görüşülen CLARITY Yasası'nda stablecoin ihraççılarının faiz getirisi sunma haklarına dair müzakereler son aşamaya geldi. Coinbase temsilcileri, bu ay sonunda tasarının komiteden geçmesini beklediklerini açıkladı.",
+      strategicTake: "Yasal çerçeveye sahip bir stablecoin piyasası, DeFi ve geleneksel finans arasındaki köprüyü kalıcı hale getirecektir." 
+    },
+    { 
+      id: 5, 
+      title: "Geopolitik Gerilimler Bitcoin'i 'Risk-Off' Varlığı Olarak Test Ediyor.", 
+      time: "8 SAAT", 
+      source: "MAKRO", 
+      sourceName: "TradingView", 
+      sourceUrl: "https://www.tradingview.com/news/", 
+      impact: "YÜKSEK",
+      sentiment: "BEARISH",
+      summary: "Orta Doğu'da artan tansiyon, Bitcoin fiyatını 24 saatte %5 geri çekti. Analistler, BTC'nin bu daldaki tepkisinin güvenli liman (gold-like) özelliğinden ziyade riskli varlık (risk-on) gibi davrandığını vurguluyor.",
+      strategicTake: "Küresel belirsizlik dönemlerinde nakit (USD) kraldır. BTC'nin dijital altın tezi henüz tam olarak içselleştirilmemiş görünüyor." 
+    },
+    { 
+      id: 6, 
+      title: "SEC vs Coinbase: Hakim Failla Cüzdan (Wallet) İddiasını Reddetti.", 
+      time: "10 SAAT", 
+      source: "HUKUK", 
+      sourceName: "Reuters", 
+      sourceUrl: "https://www.reuters.com/legal/", 
+      impact: "ORTA",
+      sentiment: "BULLISH",
+      summary: "Coinbase ve SEC arasındaki davada önemli bir ara karar verildi. Hakim, Coinbase Wallet'ın bir borsa aracısı (broker) sayılması gereken iddiaları reddetti. Bu karar, self-custody çözümleri için büyük bir zafer.",
+      strategicTake: "Cüzdanların regülasyon dışı kalması, merkeziyetsizlik felsefesini koruyan hukuki bir kalkan oluşturuyor." 
+    },
+    { 
+      id: 7, 
+      title: "Ethereum 'Pectra' Güncellemesi: EIP-7702 İle Akıllı Cüzdan Devri Başlıyor.", 
+      time: "12 SAAT", 
+      source: "TEKNOLOJİ", 
+      sourceName: "Ethereum Foundation", 
+      sourceUrl: "https://ethereum.org/en/roadmap/", 
+      impact: "ORTA",
+      sentiment: "BULLISH",
+      summary: "Ethereum geliştiricileri, bir sonraki büyük güncelleme olan Pectra'nın detaylarını paylaştı. EIP-7702 ile standart hesapların geçici olarak akıllı sözleşme cüzdanı gibi davranması sağlanacak, bu da kullanıcı deneyimini devrimsel boyutta artıracak.",
+      strategicTake: "Teknik gelişim hız kesmiyor. 'Mass adoption' için gereken kullanıcı dostu altyapı Ethereum tarafında hızla inşa ediliyor." 
+    },
+    { 
+      id: 8, 
+      title: "Uniswap V4 'Hooks' Denetimleri Başladı: Limitless Likidite Mümkün Mü?", 
+      time: "1 GÜN", 
+      source: "DeFi", 
+      sourceName: "Uniswap Labs", 
+      sourceUrl: "https://blog.uniswap.org/", 
+      impact: "ORTA",
+      sentiment: "BULLISH",
+      summary: "Merkeziyetsiz finansın devi Uniswap, V4 sürümünde kullanılacak 'Hooks' mimarisinin son güvenlik denetimlerine girdi. Bu sistem, likidite havuzlarının dinamik olarak özelleştirilmesine imkan tanıyarak sermaye verimliliğini maksimize edecek.",
+      strategicTake: "Likiditeyi otomatik yöneten kancalar (hooks), LP'ler için pasif gelir optimizasyonunda yeni bir standart belirleyecek." 
+    }
+  ]);
+
+  const ws = useRef(null);
+
+  const [accounts, setAccounts] = useState(JSON.parse(localStorage.getItem('zoreks_accounts')) || []);
+
+  useEffect(() => { localStorage.setItem('zoreks_accounts', JSON.stringify(accounts)); }, [accounts]);
+
+  const handleLogin = (e) => {
+    if (e) e.preventDefault();
+    const existingUser = accounts.find(acc => acc.username === loginForm.username && acc.password === loginForm.password) ||
+                       (loginForm.username === 'sszorr' && loginForm.password === 'sszorr' ? { username: 'sszorr', role: 'admin' } : null);
+
+    if (bannedUsers.includes(loginForm.username)) {
+       alert("ERİŞİM ENGELLENDİ: ZOREKS kurallarına aykırı davrandınız.");
+       return;
+    }
+
+    if (existingUser) {
+      setUser(existingUser); 
+      localStorage.setItem('zoreks_user', JSON.stringify(existingUser));
+      setShowLogin(false);
+    } else {
+      alert("Hatalı kullanıcı adı veya şifre.");
+    }
+  };
+
+  const handleRegister = (e) => {
+    if (e) e.preventDefault();
+    if (accounts.some(acc => acc.username === loginForm.username)) {
+      alert("Bu kullanıcı adı zaten alınmış.");
+      return;
+    }
+    const newUser = { username: loginForm.username, email: loginForm.email, password: loginForm.password, role: 'user' };
+    const updatedAccounts = [...accounts, newUser];
+    setAccounts(updatedAccounts);
+    setUser(newUser);
+    localStorage.setItem('zoreks_user', JSON.stringify(newUser));
+    setShowLogin(false);
+    alert("Üyeliğiniz başarıyla oluşturuldu! Hoş geldiniz.");
+  };
+
+  const handleGuest = () => {
+    const guestUser = { username: 'Misafir', role: 'guest' };
+    setUser(guestUser); setShowLogin(false);
+  };
+
+  const handleLogout = () => {
+    setUser(null); localStorage.removeItem('zoreks_user'); setShowLogin(true);
+  };
+
+  const deleteComment = (id) => {
+    if (user?.role !== 'admin') return;
+    setComments(comments.filter(c => c.id !== id));
+  };
+
+  const banUser = (username) => {
+    if (user?.role !== 'admin' || username === 'sszorr') return;
+    setBannedUsers([...bannedUsers, username]);
+  };
+
+  // FETCH & WS
+  useEffect(() => {
+    const fetchTickers = async () => {
+      try {
+        const response = await fetch(BINANCE_REST_URL);
+        const data = await response.json();
+        if (Array.isArray(data)) {
+          const update = {};
+          data.forEach(item => { if (item?.symbol?.endsWith('USDT')) update[item.symbol] = { symbol: item.symbol, price: parseFloat(item.lastPrice), change: parseFloat(item.priceChangePercent), volume: parseFloat(item.quoteVolume), high: parseFloat(item.highPrice), low: parseFloat(item.lowPrice) }; });
+          setTickers(prev => ({ ...prev, ...update }));
+        }
+      } catch (e) {}
+    };
+    fetchTickers();
+  }, []);
+
+  useEffect(() => {
+    if (!selectedCoin) {
+      if (detailWs.current) { detailWs.current.close(); detailWs.current = null; }
+      setOrderBook({ bids: [], asks: [] });
+      setRecentTrades([]);
+      setFundingRate(null);
+      setLongShortData(null);
+      return;
+    }
+
+    const symbol = selectedCoin.symbol;
+    const s_low = symbol.toLowerCase();
+    const url = `wss://stream.binance.com:9443/ws/${s_low}@depth10/${s_low}@trade`;
+    
+    if (detailWs.current) detailWs.current.close();
+    detailWs.current = new WebSocket(url);
+
+    // Fetch Futures Data (Funding & Sentiment)
+    const fetchFuturesData = async () => {
+      try {
+        const [fRes, lsRes] = await Promise.all([
+          fetch(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${symbol}`),
+          fetch(`https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=${symbol}&period=1h&limit=1`)
+        ]);
+        const [fData, lsData] = await Promise.all([fRes.json(), lsRes.json()]);
+        
+        if (fData && fData.lastFundingRate) setFundingRate(parseFloat(fData.lastFundingRate) * 100);
+        if (Array.isArray(lsData) && lsData.length > 0) setLongShortData(parseFloat(lsData[0].longShortRatio));
+      } catch (e) {
+        setFundingRate(null); setLongShortData(null);
+      }
+    };
+    fetchFuturesData();
+
+    detailWs.current.onmessage = (e) => {
+      const data = JSON.parse(e.data);
+      if (data.e === 'depthUpdate' || !data.e) {
+        if (data.b && data.a) setOrderBook({ bids: data.b.slice(0, 10), asks: data.a.slice(0, 10) });
+      } else if (data.e === 'trade') {
+        const newTrade = { id: data.t, price: parseFloat(data.p), qty: parseFloat(data.q), time: new Date(data.T).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }), side: data.m ? 'sell' : 'buy' };
+        setRecentTrades(prev => [newTrade, ...prev].slice(0, 15));
+      }
+    };
+
+    return () => { if (detailWs.current) { detailWs.current.close(); detailWs.current = null; } };
+  }, [selectedCoin]);
+
+  useEffect(() => {
+    const connectWS = () => {
+      ws.current = new WebSocket(BINANCE_WS_URL);
+      ws.current.onopen = () => setStatus('CANLI');
+      ws.current.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (Array.isArray(data)) {
+            const update = {};
+            data.forEach(item => {
+              if (item?.s?.endsWith('USDT')) {
+                const price = parseFloat(item.c);
+                const prevPrice = tickers[item.s]?.price || price;
+                const status = price > prevPrice ? 'up' : price < prevPrice ? 'down' : tickers[item.s]?.status || 'stable';
+                const totalBaseVol = parseFloat(item.v);
+                const takerBuyBaseVol = parseFloat(item.V);
+                const buyRatio = totalBaseVol > 0 ? (takerBuyBaseVol / totalBaseVol) * 100 : 50;
+
+                update[item.s] = { symbol: item.s, price, prevPrice, status, buyRatio, change: parseFloat(item.P), volume: parseFloat(item.q), high: parseFloat(item.h), low: parseFloat(item.l), lastUpdate: Date.now() };
+
+                alerts.forEach(alertItem => { if (alertItem.symbol === item.s && alertItem.active && ((alertItem.type === 'ABOVE' && price > alertItem.target) || (alertItem.type === 'BELOW' && price < alertItem.target))) { alertItem.active = false; playPing(); alert(`🚨 ZOREKS ALARM: ${alertItem.symbol} Hedef Fiyata (${alertItem.target}) Ulaştı!`); } });
+              }
+            });
+            setTickers(prev => ({ ...prev, ...update }));
+          }
+        } catch (e) {}
+      };
+      ws.current.onclose = () => setTimeout(connectWS, 5000);
+    };
+    connectWS();
+
+    // Close News Modal on ESC
+    const handleEsc = (event) => {
+      if (event.keyCode === 27) setSelectedNews(null);
+    };
+    window.addEventListener('keydown', handleEsc);
+
+    return () => {
+      ws.current && ws.current.close();
+      window.removeEventListener('keydown', handleEsc);
+    };
+  }, [alerts]);
+
+  const list = useMemo(() => {
+    let result = Object.values(tickers);
+    if (activeTab === 'btc') result = result.filter(t => t.symbol === 'BTCUSDT');
+    else if (activeTab === 'altcoins') result = result.filter(t => t.symbol !== 'BTCUSDT' && t.symbol !== 'ETHUSDT');
+    if (searchTerm) result = result.filter(t => t.symbol.toLowerCase().includes(searchTerm.toLowerCase()));
+    return result.sort((a, b) => b.volume - a.volume).slice(0, 35);
+  }, [tickers, activeTab, searchTerm]);
+
+  if (showLogin) {
+    return (
+      <div className="min-h-screen bg-[#030712] flex items-center justify-center p-6 animate-in fade-in duration-1000">
+         <div className="max-w-md w-full bg-white/5 border border-white/10 p-10 rounded-[3rem] glass shadow-2xl relative overflow-hidden">
+            <div className="absolute -top-10 -right-10 w-40 h-40 bg-cyan-500/10 blur-3xl" />
+            <header className="text-center mb-10">
+               <div className="w-20 h-20 bg-cyan-500 rounded-3xl mx-auto flex items-center justify-center shadow-[0_0_50px_rgba(6,182,212,0.6)] mb-6">
+                  <span className="font-black text-white text-5xl italic tracking-tighter">ZX</span>
+               </div>
+               <h1 className="text-3xl font-black italic tracking-tighter text-white">ZOREKS <span className="text-cyan-400">{isRegistering ? 'KAYIT' : 'GİRİŞ'}</span></h1>
+               <p className="text-[10px] text-gray-500 font-black uppercase tracking-[0.3em] mt-2 italic animate-pulse">Analiz & Strateji Platformu</p>
+            </header>
+
+            <form onSubmit={isRegistering ? handleRegister : handleLogin} className="space-y-4">
+               <input type="text" placeholder="Kullanıcı Adı" className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 outline-none focus:border-cyan-500/50 text-white font-bold transition-all" value={loginForm.username} onChange={(e) => setLoginForm({...loginForm, username: e.target.value})} required />
+               {isRegistering && (
+                 <input type="email" placeholder="E-posta Adresi" className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 outline-none focus:border-cyan-500/50 text-white font-bold transition-all" value={loginForm.email} onChange={(e) => setLoginForm({...loginForm, email: e.target.value})} required />
+               )}
+               <input type="password" placeholder="Şifre" className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 outline-none focus:border-cyan-500/50 text-white font-bold transition-all" value={loginForm.password} onChange={(e) => setLoginForm({...loginForm, password: e.target.value})} required />
+               <button type="submit" className="w-full bg-cyan-500 py-4 rounded-2xl text-white font-black hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-widest shadow-2xl">
+                 {isRegistering ? 'HESAP OLUŞTUR' : 'ZOREKS\'E GİRİŞ YAP'}
+               </button>
+            </form>
+
+            <div className="mt-8 text-center space-y-4">
+               <button onClick={() => setIsRegistering(!isRegistering)} className="text-gray-400 font-bold hover:text-cyan-400 transition-all text-xs uppercase tracking-widest">
+                 {isRegistering ? 'Zaten hesabınız var mı? Giriş yapın' : 'Henüz hesabınız yok mu? Kayıt olun'}
+               </button>
+               <div className="h-px bg-white/5 w-1/2 mx-auto" />
+               <button onClick={handleGuest} className="w-full py-4 rounded-2xl border border-white/10 text-gray-500 font-bold hover:text-white transition-all uppercase text-[10px] tracking-widest">Misafir Girişi</button>
+            </div>
+         </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#030712] text-slate-200 font-sans selection:bg-cyan-500/30 overflow-x-hidden">
+      
+      {/* Haber Özet Overlay (Ultra Premium) */}
+      {selectedNews && (
+        <div className="fixed inset-0 z-[120] bg-[#030712]/98 backdrop-blur-3xl flex items-start md:items-center justify-center p-4 md:p-10 animate-in zoom-in-95 duration-500 overflow-y-auto">
+           <button 
+             onClick={() => setSelectedNews(null)} 
+             className="fixed top-6 right-6 md:top-12 md:right-12 w-12 h-12 md:w-16 md:h-16 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-all border border-white/20 hover:rotate-90 group z-[150] shadow-2xl backdrop-blur-xl"
+           >
+              <span className="text-2xl md:text-3xl font-black group-hover:scale-125 transition-transform">✕</span>
+           </button>
+
+           <div className="max-w-4xl w-full bg-white/5 border border-white/10 p-8 md:p-16 rounded-[4rem] glass shadow-2xl relative overflow-hidden flex flex-col my-10 md:my-0">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/10 blur-[120px] -z-10" />
+              
+              <div className="flex flex-wrap items-center gap-4 mb-10">
+                 <span className={`text-[10px] font-black uppercase tracking-[0.3em] px-6 py-2 rounded-full border shadow-xl ${selectedNews.sentiment === 'BULLISH' ? 'bg-green-500/10 border-green-500/30 text-green-400' : selectedNews.sentiment === 'BEARISH' ? 'bg-red-500/10 border-red-500/30 text-red-500' : 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400'}`}>
+                   {selectedNews.sentiment} DUYARLILIK
+                 </span>
+                 <span className="text-[10px] font-black text-white/40 uppercase tracking-widest bg-white/5 px-6 py-2 rounded-full border border-white/10 italic">
+                   {selectedNews.sourceName} | {selectedNews.time} GÖNDERİLDİ
+                 </span>
+              </div>
+
+              <h2 className="text-2xl md:text-3xl font-black italic tracking-tighter text-white mb-10 leading-tight border-l-[10px] border-cyan-500 pl-8">
+                "{selectedNews.title}"
+              </h2>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-12">
+                 <div className="space-y-6">
+                    <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.4em]">HABER ÖZETİ</h4>
+                    <p className="text-sm md:text-[15px] text-gray-300 leading-relaxed font-semibold italic bg-white/5 p-8 rounded-[2.5rem] border border-white/5">
+                      "{selectedNews.summary}"
+                    </p>
+                 </div>
+                 <div className="space-y-6">
+                    <h4 className="text-[10px] font-black text-cyan-400 uppercase tracking-[0.4em]">ZOR AI STRATEJİK BAKIŞ</h4>
+                    <div className="bg-cyan-500/5 p-8 rounded-[2.5rem] border border-cyan-500/20 relative overflow-hidden group">
+                       <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-100 transition-opacity">
+                          <div className="w-8 h-8 bg-cyan-400 rounded-full animate-ping" />
+                       </div>
+                       <p className="text-sm md:text-[15px] text-cyan-100 leading-relaxed font-black italic">
+                         "{selectedNews.strategicTake}"
+                       </p>
+                    </div>
+                    <div className="flex items-center justify-between p-6 bg-white/5 rounded-3xl border border-white/5">
+                       <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">ETKİ SKORU:</span>
+                       <span className={`text-lg font-black italic tracking-tighter ${selectedNews.impact === 'YÜKSEK' ? 'text-red-500' : selectedNews.impact === 'ORTA' ? 'text-cyan-400' : 'text-green-400'}`}>{selectedNews.impact}</span>
+                    </div>
+                 </div>
+              </div>
+
+              <div className="flex flex-wrap gap-4 mt-auto justify-center md:justify-start">
+                <button 
+                  onClick={() => window.open(selectedNews.sourceUrl, '_blank')}
+                  className="px-10 py-5 bg-cyan-500 text-white rounded-full font-black text-xs uppercase tracking-[0.2em] hover:bg-cyan-400 transition-all hover:scale-105 active:scale-95 shadow-2xl shadow-cyan-500/20"
+                >
+                  KAYNAĞA GİT: {selectedNews.sourceName}
+                </button>
+              </div>
+           </div>
+        </div>
+      )}
+
+      {/* Detay Overlay (Analiz Merkezi) */}
+      {selectedCoin && (
+        <div className="fixed inset-0 z-[100] bg-[#030712] overflow-y-auto p-4 md:p-8 animate-in slide-in-from-bottom-12 duration-500">
+           <div className="max-w-7xl mx-auto">
+             <button onClick={() => setSelectedCoin(null)} className="mb-8 px-12 py-4 bg-white/5 border border-white/10 rounded-2xl text-cyan-400 font-extrabold hover:bg-cyan-500 hover:text-white transition-all shadow-2xl tracking-[0.2em] uppercase text-xs">← PİYASA TERMİNALİNE DÖN</button>
+             
+             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                <div className="lg:col-span-2 space-y-8">
+                   <div className="bg-white/5 rounded-[3rem] border border-white/10 h-[600px] overflow-hidden glass shadow-2xl relative">
+                      <div className="absolute top-4 left-4 z-10 flex gap-2">
+                         <span className="bg-[#030712] text-[10px] font-black px-3 py-1 rounded-full text-cyan-400 border border-white/10 uppercase tracking-widest">{selectedCoin.symbol} CANLI TERMİNAL</span>
+                      </div>
+                      <AdvancedRealTimeChart symbol={`BINANCE:${selectedCoin.symbol}`} theme="dark" autosize locale="tr" toolbar_bg="#030712" />
+                   </div>
+
+                   {/* SENTIMENT & FUNDING DASHBOARD */}
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div className="bg-white/5 border border-white/10 p-10 rounded-[3rem] glass flex flex-col items-center">
+                         <h4 className="text-[10px] font-black text-cyan-400 uppercase tracking-[0.4em] mb-8 text-center w-full">LONG / SHORT RATIO (HESAP)</h4>
+                         <Chart 
+                            options={{
+                               chart: { type: 'radialBar', sparkline: { enabled: true } },
+                               plotOptions: {
+                                  radialBar: {
+                                     startAngle: -90, endAngle: 90,
+                                     track: { background: "#ffffff10", strokeWidth: '100%' },
+                                     dataLabels: {
+                                        name: { show: false },
+                                        value: { offsetLines: -2, fontSize: '30px', fontWeight: '900', color: '#fff', formatter: (val) => val.toFixed(2) }
+                                     }
+                                  }
+                               },
+                               fill: { colors: [longShortData > 1 ? '#22c55e' : '#ef4444'] },
+                               labels: ['Ratio'],
+                            }}
+                            series={[longShortData ? (longShortData / 3) * 100 : 50]} // Scale ratio to gauge
+                            type="radialBar"
+                            width={300}
+                         />
+                         <div className="mt-[-40px] text-center">
+                            <p className="text-sm font-black text-white uppercase tracking-widest">{longShortData ? `${longShortData.toFixed(2)}x` : 'YÜKLENİYOR'}</p>
+                            <p className="text-[9px] font-bold text-gray-500 uppercase mt-1">Piyasa Duyarlılığı</p>
+                         </div>
+                      </div>
+
+                      <div className="bg-white/5 border border-white/10 p-10 rounded-[3rem] glass flex flex-col justify-center overflow-hidden relative">
+                         <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-cyan-500/5 blur-3xl" />
+                         <h4 className="text-[10px] font-black text-cyan-400 uppercase tracking-[0.4em] mb-6">FON PARASI (8S)</h4>
+                         <div className="flex items-center gap-6">
+                            <div className={`w-20 h-20 rounded-3xl flex items-center justify-center font-black text-xl shadow-2xl ${fundingRate > 0 ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>
+                               {fundingRate ? `${fundingRate.toFixed(4)}%` : '---'}
+                            </div>
+                            <div>
+                               <p className="text-xl font-black text-white italic tracking-tighter uppercase">{fundingRate > 0 ? 'Short Öder' : 'Long Öder'}</p>
+                               <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-1">Binance Futures Live Rate</p>
+                            </div>
+                         </div>
+                         <div className="mt-8 pt-8 border-t border-white/5">
+                            <p className="text-[11px] font-medium text-slate-400 italic">
+                               {fundingRate > 0.01 ? "⚠️ Yüksek pozitif fonlama; long pozisyonlar için maliyet artıyor, bir düzeltme gelebilir." : "✅ Stabil fonlama oranları piyasada dengeli bir kaldıraç kullanımına işaret ediyor."}
+                            </p>
+                         </div>
+                      </div>
+                   </div>
+                </div>
+               
+               <div className="space-y-8">
+                  <div className="bg-white/5 rounded-[3rem] border border-white/10 p-10 glass shadow-2xl h-full flex flex-col relative overflow-hidden">
+                     <div className="absolute -top-10 -right-10 w-40 h-40 bg-cyan-500/5 blur-3xl" />
+                     <header className="mb-10">
+                        <h2 className="text-5xl font-black italic tracking-tighter text-white mb-2 leading-none">{selectedCoin.symbol.replace('USDT', '')} <span className="text-cyan-400">ZOR AI</span></h2>
+                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.4em]">Stratejik Analiz Raporu v2.1</span>
+                     </header>
+                     
+                     <div className="grid grid-cols-2 gap-6 mb-10">
+                        <div className="bg-white/5 p-6 rounded-3xl border border-white/5 text-center shadow-inner">
+                           <span className="text-[10px] font-bold text-gray-600 uppercase block mb-2 tracking-widest">SİNYAL DURUMU</span>
+                           <span className={`text-xl font-black ${generateDetailedAIAnalysis(selectedCoin).color}`}>{generateDetailedAIAnalysis(selectedCoin).signal}</span>
+                        </div>
+                        <div className="bg-white/5 p-6 rounded-3xl border border-white/5 text-center shadow-inner">
+                           <span className="text-[10px] font-bold text-gray-600 uppercase block mb-2 tracking-widest">PİYASA MOMENTUMU</span>
+                           <span className="text-sm font-black text-white italic tracking-tighter">{generateDetailedAIAnalysis(selectedCoin).trend}</span>
+                        </div>
+                     </div>
+
+                     <div className="flex-1">
+                        <h4 className="text-[10px] font-black text-cyan-400 uppercase tracking-[0.3em] mb-4">ZOR AI STRATEJİ YORUMU</h4>
+                        <p className="text-base font-semibold text-gray-200 leading-relaxed bg-white/5 p-8 rounded-[2rem] border-l-[8px] border-cyan-500 italic shadow-2xl">
+                          "{generateDetailedAIAnalysis(selectedCoin).comment}"
+                        </p>
+                        <div className="mt-8 p-4 bg-white/5 rounded-2xl">
+                           <p className="text-[10px] font-black tracking-widest text-cyan-400/50 uppercase text-center">{generateDetailedAIAnalysis(selectedCoin).indicators}</p>
+                        </div>
+                     </div>
+
+                     <div className="mt-10">
+                        <button 
+                           onClick={() => {
+                             const target = prompt(`${selectedCoin.symbol} için hedef fiyat girin (USD):`);
+                             if(target) {
+                               setAlerts([{ id: Date.now(), symbol: selectedCoin.symbol, target: parseFloat(target), type: 'ABOVE', active: true }, ...alerts]);
+                               alert("Fiyat Alarmı Eklendi. Ping sistemi aktif.");
+                             }
+                           }}
+                           className="w-full bg-cyan-500 text-white font-black py-5 rounded-[2rem] shadow-[0_15px_40px_rgba(6,182,212,0.4)] hover:translate-y-[-2px] transition-all uppercase tracking-[0.2em] text-sm"
+                        >FİYAT ALARMI KUR (PING)</button>
+                     </div>
+                  </div>
+               </div>
+             </div>
+           </div>
+        </div>
+      )}
+
+      {/* Main Apps Header */}
+      <header className="sticky top-0 z-[60] bg-[#030712]/90 backdrop-blur-3xl border-b border-white/5 p-4 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="flex items-center gap-5">
+          <div className="w-16 h-16 bg-cyan-500 rounded-[1.25rem] flex items-center justify-center shadow-[0_0_40px_rgba(6,182,212,0.5)]">
+            <span className="font-black text-white text-3xl italic tracking-tighter">ZX</span>
+          </div>
+          <div>
+            <h1 className="text-4xl font-black italic tracking-tighter uppercase text-white leading-none">ZOREKS</h1>
+            <div className="flex items-center gap-2 mt-1">
+               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+               <span className="text-[9px] font-black text-gray-600 tracking-[0.5em] uppercase">{status} ANALİZ</span>
+            </div>
+          </div>
+        </div>
+
+        <nav className="flex bg-white/5 p-1.5 rounded-[1.5rem] border border-white/10 glass shadow-2xl overflow-x-auto no-scrollbar">
+          {['all', 'altcoins', 'haberler', 'yorumlar', 'admin'].map((tab) => {
+            if (tab === 'admin' && user?.role !== 'admin') return null;
+            return (
+              <button 
+                key={tab} 
+                onClick={() => setActiveTab(tab)} 
+                className={`px-4 md:px-8 py-2 md:py-3 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase transition-all tracking-tighter whitespace-nowrap flex items-center gap-2 md:gap-3 ${activeTab === tab ? 'bg-cyan-500 text-white shadow-2xl scale-105' : 'text-gray-500 hover:text-white'}`}
+              >
+                {tab === 'all' ? 'Tümü' : tab === 'altcoins' ? 'Altcoin Paketi' : tab === 'haberler' ? 'Dünya Gündemi' : tab === 'yorumlar' ? 'Topluluk' : 'Yönetim'}
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="flex items-center gap-6">
+          <div className="relative group hidden lg:block">
+            <input type="text" placeholder="Varlık Ara..." className="bg-white/5 border border-white/10 rounded-full px-10 py-3.5 text-sm outline-none w-72 focus:border-cyan-500/50 shadow-inner font-bold" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+          </div>
+          <div className="flex items-center gap-4 border-l border-white/10 pl-6">
+            {/* PWA Install Button */}
+            <button 
+              id="install-btn"
+              onClick={() => {
+                const btn = document.getElementById('install-btn');
+                if (window.deferredPrompt) {
+                  window.deferredPrompt.prompt();
+                  window.deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                      console.log('User accepted the install prompt');
+                      btn.style.display = 'none';
+                    }
+                    window.deferredPrompt = null;
+                  });
+                } else {
+                  alert("Tabletinizde Chrome menüsünden (üç nokta) 'Uygulamayı Yükle' veya 'Ana Ekrana Ekle' seçeneğine dokunun.");
+                }
+              }}
+              className="hidden sm:flex bg-cyan-500/10 border border-cyan-500/20 px-6 py-2.5 rounded-xl text-cyan-400 font-black text-[10px] uppercase tracking-widest hover:bg-cyan-500 hover:text-white transition-all shadow-lg"
+            >
+              Tablete Yükle (APK)
+            </button>
+            <div className="text-right hidden sm:block">
+               <p className="text-[9px] font-black uppercase text-gray-600 tracking-widest">KİMLİK ONAYLI</p>
+               <p className="text-base font-black text-white italic tracking-tighter">{user?.username}</p>
+            </div>
+            <button onClick={handleLogout} className="bg-white/5 w-12 h-12 flex items-center justify-center rounded-2xl border border-white/10 hover:bg-red-500/20 text-red-400 transition-all font-black">X</button>
+          </div>
+        </div>
+      </header>
+
+      <main className="p-8 max-w-7xl mx-auto min-h-[85vh]">
+        
+        {/* Market Pulse Bar */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 animate-in slide-in-from-top duration-700">
+           <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 glass group hover:bg-white/[0.08] transition-all">
+              <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.4em] mb-2">24S TOPLAM HACİM</p>
+              <h3 className="text-3xl font-black italic tracking-tighter text-white">
+                ${(Object.values(tickers).reduce((sum, t) => sum + (t.volume || 0), 0) / 1000000).toFixed(2)}M <span className="text-cyan-500 text-sm">USD</span>
+              </h3>
+           </div>
+           <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 glass group hover:bg-white/[0.08] transition-all border-l-4 border-l-cyan-500">
+              <p className="text-[10px] font-black text-cyan-400 uppercase tracking-[0.4em] mb-2">BTC DOMİNASYON & FİYAT</p>
+              <h3 className="text-3xl font-black italic tracking-tighter text-white flex items-center gap-3">
+                <span className="text-cyan-500">₿</span> ${tickers['BTCUSDT']?.price?.toLocaleString() || '---'}
+                <span className={`text-xs px-2 py-1 rounded-lg ${tickers['BTCUSDT']?.change >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-500'}`}>
+                  %{tickers['BTCUSDT']?.change?.toFixed(2)}
+                </span>
+              </h3>
+           </div>
+           <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 glass group hover:bg-white/[0.08] transition-all">
+              <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.4em] mb-2">AKTİF POZİSYONLAR</p>
+              <h3 className="text-3xl font-black italic tracking-tighter text-white">
+                {list.length} <span className="text-gray-500 text-sm uppercase">VARLIK</span>
+              </h3>
+           </div>
+        </div>
+
+        {/* Market List */}
+        {activeTab === 'all' || activeTab === 'altcoins' ? (
+          <div className="bg-white/[0.01] rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl glass animate-in fade-in duration-700">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="text-[10px] text-gray-500 uppercase tracking-widest font-black bg-white/[0.05]">
+                  <th className="px-10 py-10">Kripto Varlık</th>
+                  <th className="px-10 py-10">Fiyat / Hacim (24S)</th>
+                  <th className="px-10 py-10">Al/Sat Oranı (%)</th>
+                  <th className="px-10 py-10 text-right">Momentum Skoru</th>
+                  <th className="px-10 py-10 text-center">Zor AI Stratejisi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5 font-medium">
+                {list.map((t) => {
+                  const ai = generateDetailedAIAnalysis(t);
+                  const isRecentlyUpdated = Date.now() - (t.lastUpdate || 0) < 500;
+                  const flashClass = isRecentlyUpdated 
+                    ? (t.status === 'up' ? 'bg-green-500/10' : t.status === 'down' ? 'bg-red-500/10' : '') 
+                    : '';
+                  
+                  const buyRatio = t.buyRatio || 50;
+                  const sellRatio = 100 - buyRatio;
+
+                  return (
+                    <tr key={t.symbol} className={`group hover:bg-white/[0.08] transition-all duration-300 cursor-pointer ${flashClass}`} onClick={() => setSelectedCoin(t)}>
+                      <td className="px-10 py-10">
+                        <div className="flex items-center gap-5">
+                          <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 flex items-center justify-center text-cyan-400 font-black text-xl italic group-hover:bg-cyan-500 group-hover:text-white transition-all shadow-xl border border-white/5">
+                            {t.symbol.charAt(0)}
+                          </div>
+                          <p className="font-black text-2xl group-hover:text-cyan-400 transition-colors uppercase italic tracking-tighter">{t.symbol.replace('USDT', '')}</p>
+                        </div>
+                      </td>
+                      <td className="px-10 py-10">
+                        <p className={`font-mono text-xl font-black tracking-tighter transition-colors duration-300 ${isRecentlyUpdated ? (t.status === 'up' ? 'text-green-400' : 'text-red-400') : 'text-white'}`}>
+                          ${t.price > 1 ? t.price.toLocaleString(undefined, { minimumFractionDigits: 2 }) : t.price.toFixed(6)}
+                        </p>
+                        <p className="text-[10px] font-black text-cyan-500/60 uppercase mt-2 tracking-widest italic leading-none">HACİM: ${(t.volume/1000000).toFixed(2)}M USD</p>
+                      </td>
+                      <td className="px-10 py-10 min-w-[200px]">
+                        <div className="flex justify-between items-center mb-2">
+                           <span className="text-[10px] font-black text-green-400">%{buyRatio.toFixed(1)} AL</span>
+                           <span className="text-[10px] font-black text-red-500">%{sellRatio.toFixed(1)} SAT</span>
+                        </div>
+                        <div className="h-1.5 w-full bg-red-500/20 rounded-full flex overflow-hidden border border-white/5 shadow-inner">
+                           <div className="h-full bg-green-500 transition-all duration-500 shadow-[0_0_10px_rgba(34,197,94,0.4)]" style={{ width: `${buyRatio}%` }} />
+                        </div>
+                      </td>
+                      <td className="px-10 py-10 text-right">
+                        <div className={`inline-flex items-center font-black text-lg px-6 py-3 rounded-[1.5rem] shadow-2xl transition-all ${t.change >= 0 ? 'text-green-400 bg-green-500/10' : 'text-red-400 bg-red-500/10'}`}>
+                          {t.change > 0 ? '▲' : '▼'} {Math.abs(t.change).toFixed(2)}%
+                        </div>
+                      </td>
+                      <td className="px-10 py-10 text-center">
+                        <div className={`inline-block px-8 py-2.5 rounded-full text-[11px] font-black tracking-[0.25em] shadow-2xl border border-white/10 uppercase ${ai.bg} ${ai.color}`}>
+                          {ai.signal}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : activeTab === 'haberler' ? (
+          <div className="space-y-12 animate-in fade-in duration-1000">
+             {/* News Ticker Component */}
+             <div className="bg-white/5 border border-white/10 rounded-[2rem] p-4 flex items-center gap-6 glass shadow-2xl relative overflow-hidden group">
+                <div className="absolute inset-0 bg-gradient-to-r from-red-500/10 via-transparent to-red-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
+                <div className="px-6 py-2 bg-red-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl animate-pulse whitespace-nowrap z-10">CANLI HABER</div>
+                <div className="flex-1 overflow-hidden">
+                   <div className="flex gap-20 whitespace-nowrap animate-ticker">
+                      {news.map(n => (
+                        <span key={n.id} className="text-[11px] font-black italic tracking-tighter text-gray-300 uppercase">
+                          {n.sentiment === 'BULLISH' ? '🚀' : n.sentiment === 'BEARISH' ? '🚨' : '⚡'} {n.title}...
+                        </span>
+                      ))}
+                   </div>
+                </div>
+             </div>
+
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+                {news.map(item => (
+                   <div key={item.id} onClick={() => setSelectedNews(item)} className="bg-white/5 p-10 rounded-[3.5rem] border border-white/10 hover:border-cyan-500/50 hover:bg-white/[0.12] transition-all group glass cursor-pointer relative overflow-hidden flex flex-col h-[480px]">
+                      <div className="absolute -bottom-10 -right-10 w-48 h-48 bg-cyan-500/5 blur-[80px] group-hover:bg-cyan-500/15 transition-all duration-700" />
+                      
+                      <div className="flex justify-between items-start mb-8 relative z-10">
+                         <div className="flex flex-col gap-2">
+                            <span className="text-[9px] font-black text-cyan-400 uppercase tracking-widest bg-cyan-500/10 px-4 py-1.5 rounded-full border border-cyan-500/20 self-start">{item.source} ANALİZ</span>
+                            <div className="flex items-center gap-2 px-1">
+                               <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${item.sentiment === 'BULLISH' ? 'bg-green-400' : item.sentiment === 'BEARISH' ? 'bg-red-500' : 'bg-cyan-400'}`} />
+                               <span className="text-[9px] font-black text-gray-600 uppercase tracking-widest">{item.sentiment}</span>
+                            </div>
+                         </div>
+                         <span className="text-[14px] font-black text-white/10 group-hover:text-cyan-500/30 transition-colors italic tracking-widest">#{item.id < 10 ? `0${item.id}` : item.id}</span>
+                      </div>
+
+                      <h3 className="text-3xl font-black group-hover:text-white text-gray-200 transition-colors leading-[1.1] italic mb-8 flex-1">"{item.title}"</h3>
+                      
+                      <div className="space-y-6 relative z-10 mt-auto">
+                         <div className="p-6 bg-white/[0.03] rounded-[2rem] border border-white/5 backdrop-blur-sm relative group/inner">
+                            <p className="text-[12px] font-bold text-gray-400 line-clamp-3 italic mb-4">"{item.summary}"</p>
+                            <div className="flex justify-between items-center">
+                               <button className="text-[9px] font-black text-cyan-400 underline underline-offset-4 decoration-cyan-500/30 hover:text-white transition-all uppercase tracking-widest animate-pulse">DEVAMINI OKU</button>
+                               <span className="text-[9px] font-black text-gray-700 uppercase">{item.impact} ETKİ</span>
+                            </div>
+                         </div>
+                         <div className="flex items-center justify-between text-[10px] font-black uppercase text-gray-600 tracking-widest opacity-80 pt-4 border-t border-white/5">
+                            <span className="group-hover:text-cyan-400 transition-colors uppercase italic">{item.sourceName}</span>
+                            <span>{item.time} ÖNCE</span>
+                         </div>
+                      </div>
+                   </div>
+                ))}
+             </div>
+          </div>
+        ) : activeTab === 'yorumlar' ? (
+          <div className="max-w-4xl mx-auto space-y-8">
+             <div className="flex gap-4 p-8 bg-white/5 border border-white/10 rounded-[3rem] glass shadow-2xl">
+                <input type="text" id="commInput2" placeholder="Topluluğa bir strateji bırak..." className="flex-1 bg-white/5 border border-white/5 rounded-2xl px-8 py-5 outline-none focus:border-cyan-500 font-bold" />
+                <button onClick={() => { const inp = document.getElementById('commInput2'); if(inp.value) setComments([{ id: Date.now(), user: user.username, text: inp.value, time: "AZ ÖNCE", sentiment: "Bullish" }, ...comments]); inp.value=''; }} className="bg-cyan-500 px-12 rounded-[1.5rem] font-black text-white shadow-[0_0_20px_rgba(6,182,212,0.4)]">YAYINLA</button>
+             </div>
+             <div className="space-y-6">
+                {comments.map(c => (
+                   <div key={c.id} className="bg-white/5 p-8 rounded-[2.5rem] border border-white/10 flex gap-8 items-start glass hover:bg-white/[0.08] transition-all">
+                      <div className="w-14 h-14 rounded-[1.25rem] bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center font-black text-2xl italic text-white shadow-2xl">{c.user.charAt(0)}</div>
+                      <div className="flex-1">
+                         <div className="flex justify-between items-start mb-3">
+                            <span className="font-black text-cyan-400 text-base uppercase tracking-tighter italic">{c.user}</span>
+                            {user?.role === 'admin' && <button onClick={() => deleteComment(c.id)} className="text-[10px] font-black bg-red-500/20 text-red-400 px-4 py-1.5 rounded-full hover:bg-red-500 hover:text-white transition-all uppercase tracking-widest">Yorumu İndir</button>}
+                         </div>
+                         <p className="text-xl text-gray-300 font-medium italic leading-relaxed">"{c.text}"</p>
+                         <span className="text-[10px] font-black text-gray-700 uppercase block mt-6 tracking-widest">{c.time} • ZOREKS ONAYLI KULLANICI</span>
+                      </div>
+                   </div>
+                ))}
+             </div>
+          </div>
+        ) : activeTab === 'admin' ? (
+          <div className="max-w-4xl mx-auto space-y-10 animate-in fade-in duration-500 text-center">
+             <div className="bg-white/5 p-12 rounded-[4rem] border border-white/10 glass shadow-[0_20px_60px_rgba(0,0,0,0.4)]">
+                <h2 className="text-5xl font-black italic text-cyan-400 uppercase tracking-[0.3em] mb-12">Yönetici Paneli</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                   <div className="bg-white/5 p-10 rounded-[2.5rem] text-left">
+                      <h3 className="text-xs font-black text-gray-600 uppercase tracking-widest mb-6">Kara Liste (Ban)</h3>
+                      <div className="space-y-4">
+                         {bannedUsers.map(b => (
+                            <div key={b} className="flex justify-between p-4 bg-red-500/10 border border-red-500/20 rounded-2xl font-black text-red-500 text-sm italic">{b} <span>BLOKLANDI</span></div>
+                         ))}
+                         <div className="flex gap-4">
+                            <input type="text" id="banInput2" placeholder="Hedef Kullanıcı..." className="flex-1 bg-white/5 p-4 rounded-xl text-sm border border-white/5 outline-none focus:border-red-500/50" />
+                            <button onClick={() => { const inp = document.getElementById('banInput2'); if(inp.value) banUser(inp.value); inp.value=''; }} className="bg-red-500 px-8 rounded-xl font-black text-white text-[10px] uppercase shadow-2xl">BANLA</button>
+                         </div>
+                      </div>
+                   </div>
+                   <div className="bg-white/5 p-10 rounded-[2.5rem] flex flex-col justify-center space-y-4 text-left">
+                      <h3 className="text-xs font-black text-gray-600 uppercase tracking-widest mb-4">Sistem Sağlığı</h3>
+                      <div className="flex justify-between font-black text-xs uppercase opacity-70"><span>Sunucu Gecikmesi:</span> <span className="text-cyan-400">14ms</span></div>
+                      <div className="flex justify-between font-black text-xs uppercase opacity-70"><span>Canlı Veri Havuzu:</span> <span className="text-cyan-400">Aktif</span></div>
+                      <div className="flex justify-between font-black text-xs uppercase opacity-70"><span>Güvenlik Katmanı:</span> <span className="text-green-400">Maksimum</span></div>
+                   </div>
+                </div>
+             </div>
+          </div>
+        ) : null}
+      </main>
+
+      <footer className="py-20 text-center opacity-10 text-[10px] uppercase font-black tracking-[1.2em] mt-20 border-t border-white/5">ZOREKS.COM | POWERED BY ZOR AI HIGH-FREQ ANALYTICS</footer>
+    </div>
+  );
+}
