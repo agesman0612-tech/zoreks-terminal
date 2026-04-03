@@ -895,23 +895,26 @@ export default function App() {
       {selectedCoin && (() => {
         const liveCoin = tickers[selectedCoin.symbol] || selectedCoin;
         return (
-        <div className="fixed inset-0 z-[150] bg-[#030712]/95 backdrop-blur-3xl flex items-center justify-center p-2 md:p-8 animate-in zoom-in-95 duration-500 overflow-y-auto">
-           <button onClick={() => setSelectedCoin(null)} className="fixed top-4 right-4 md:top-6 md:right-6 w-10 h-10 md:w-12 md:h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-all border border-white/20 z-[200]">✕</button>
+        <div className="fixed inset-0 z-[150] bg-[#030712]/98 backdrop-blur-3xl flex flex-col p-0 md:p-8 animate-in slide-in-from-bottom duration-500 overflow-hidden">
+           <button onClick={() => setSelectedCoin(null)} className="fixed top-4 right-4 md:top-6 md:right-6 w-10 h-10 md:w-12 md:h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-all border border-white/20 z-[200] shadow-2xl backdrop-blur-xl">✕</button>
            
-           <div className="w-full max-w-7xl mx-auto min-h-[90vh] bg-[#030712] border border-white/5 rounded-3xl md:rounded-[4rem] flex flex-col relative overflow-hidden shadow-2xl mt-12 md:mt-0">
-              <div className="p-6 border-b border-white/10 flex flex-wrap items-center justify-between gap-6 bg-white/[0.02]">
-                 <div className="flex items-center gap-6">
+           <div className="w-full h-full max-w-7xl mx-auto bg-[#030712] border-0 md:border border-white/5 rounded-none md:rounded-[4rem] flex flex-col relative overflow-hidden shadow-2xl">
+              <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-500/5 blur-[120px] rounded-full pointer-events-none" />
+              
+              {/* MODAL HEADER */}
+              <div className="p-6 md:p-8 border-b border-white/10 flex flex-wrap items-center justify-between gap-6 bg-white/[0.02]">
+                 <div className="flex items-center gap-4 md:gap-6 pt-10 md:pt-0">
                     <div className="w-14 h-14 bg-cyan-500 rounded-2xl flex items-center justify-center text-white font-black text-2xl italic shadow-2xl">{liveCoin.symbol.charAt(0)}</div>
                     <div>
-                       <h2 className="text-3xl font-black italic tracking-tighter text-white uppercase">{liveCoin.symbol.replace('USDT', '')} <span className="text-cyan-500">PRO TERMİNAL</span></h2>
+                       <h2 className="text-3xl font-black italic tracking-tighter text-white uppercase leading-none">{liveCoin.symbol.replace('USDT', '')} <span className="text-cyan-500 text-lg md:text-3xl">PRO</span></h2>
                        <div className="flex items-center gap-2 mt-1">
                           <div className="w-2 h-2 bg-cyan-500 rounded-full animate-ping" />
-                          <p className="text-[9px] text-gray-500 font-black tracking-widest uppercase">ZOR AI STRATEJİK ANALİZ v2.5</p>
+                          <p className="text-[9px] text-gray-500 font-black tracking-widest uppercase mb-0">ZOR AI STRATEJİK ANALİZ v4.0.13</p>
                        </div>
                     </div>
                  </div>
 
-                 <nav className="flex bg-white/5 p-1 rounded-2xl border border-white/10 glass">
+                 <nav className="flex overflow-x-auto no-scrollbar w-full lg:w-auto bg-white/5 p-1 rounded-2xl border border-white/10 glass whitespace-nowrap">
                     {['chart', 'sentiment', 'strateji', 'trade', 'orderbook'].map((tab) => (
                        <button 
                           key={tab}
@@ -923,7 +926,7 @@ export default function App() {
                     ))}
                  </nav>
 
-                 <div className="text-right">
+                 <div className="text-right hidden md:block">
                     <p className="text-2xl font-black text-white font-mono tracking-tighter">${liveCoin.price?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                     <p className={`text-[11px] font-black mt-1 ${liveCoin.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                        {liveCoin.change >= 0 ? '+' : ''}{liveCoin.change}% (24S)
@@ -931,11 +934,11 @@ export default function App() {
                  </div>
               </div>
 
-              <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+              <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
                  {/* Main Content Area */}
-                 <div className="flex-1 p-8 overflow-y-auto custom-scrollbar border-r border-white/10">
+                 <div className="flex-1 p-4 md:p-8 overflow-y-auto custom-scrollbar border-b lg:border-b-0 lg:border-r border-white/10 pb-20 lg:pb-8">
                     {modalTab === 'chart' && (
-                       <div className="h-full min-h-[500px] rounded-[2rem] overflow-hidden border border-white/5 shadow-2xl animate-in zoom-in-95 duration-500">
+                       <div className="w-full h-[450px] md:h-full md:min-h-[500px] rounded-[2rem] overflow-hidden border border-white/5 shadow-2xl animate-in zoom-in-95 duration-500">
                           <AdvancedRealTimeChart symbol={`BINANCE:${liveCoin.symbol}`} theme="dark" autosize locale="tr" hide_side_toolbar={false} />
                        </div>
                     )}
@@ -1475,7 +1478,7 @@ export default function App() {
                <h1 className="text-2xl md:text-4xl font-black italic tracking-tighter uppercase text-white leading-none">ZOREKS</h1>
                <div className="flex items-center gap-2 mt-1">
                   <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                  <span className="text-[8px] md:text-[9px] font-black text-gray-600 tracking-[0.3em] md:tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.12</span>
+                  <span className="text-[8px] md:text-[9px] font-black text-gray-600 tracking-[0.3em] md:tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.13</span>
                </div>
              </div>
           </div>
