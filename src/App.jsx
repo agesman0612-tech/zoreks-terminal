@@ -406,13 +406,35 @@ export default function App() {
     const updateStats = async () => {
       setAiAnalysis(generateDetailedAIAnalysis(selectedCoin));
       try {
-        const [fRes, lsRes] = await Promise.all([
+        const [fRes, lsRes, kRes] = await Promise.all([
           fetch(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${symbol}`),
-          fetch(`https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=${symbol}&period=1h&limit=1`)
+          fetch(`https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=${symbol}&period=1h&limit=1`),
+          fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1d&limit=1`)
         ]);
-        const [fData, lsData] = await Promise.all([fRes.json(), lsRes.json()]);
+        const [fData, lsData, kData] = await Promise.all([fRes.json(), lsRes.json(), kRes.json()]);
+        
         if (fData && fData.lastFundingRate) setFundingRate(parseFloat(fData.lastFundingRate) * 100);
         if (Array.isArray(lsData) && lsData.length > 0) setLongShortData(parseFloat(lsData[0].longShortRatio));
+        
+        // High-precision sentiment injection
+        if (Array.isArray(kData) && kData.length > 0) {
+          const k = kData[0];
+          const totalQuoteVol = parseFloat(k[7]);
+          const takerQuoteVol = parseFloat(k[10]);
+          const totalBaseVol = parseFloat(k[5]);
+          const takerBaseVol = parseFloat(k[9]);
+          const buyRatio = totalBaseVol > 0 ? (takerBaseVol / totalBaseVol) * 100 : 50;
+
+          setTickers(prev => ({
+            ...prev,
+            [symbol]: {
+              ...(prev[symbol] || {}),
+              volume: totalQuoteVol,
+              buyVol: takerQuoteVol,
+              buyRatio: !isNaN(buyRatio) ? buyRatio : 50
+            }
+          }));
+        }
       } catch (e) {}
     };
     updateStats();
