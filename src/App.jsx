@@ -294,23 +294,29 @@ export default function App() {
   const ws = useRef(null);
   const tradeBuffer = useRef([]);
   const [shortTermSentiment, setShortTermSentiment] = useState({ buy: 0, sell: 0, ratio: 50 });
+  const [tradeAmount, setTradeAmount] = useState('');
+  const [orderType, setOrderType] = useState('MARKET'); 
+  const [limitPrice, setLimitPrice] = useState('');
   const [accounts, setAccounts] = useState(JSON.parse(localStorage.getItem('zoreks_accounts')) || []);
 
   useEffect(() => { localStorage.setItem('zoreks_accounts', JSON.stringify(accounts)); }, [accounts]);
 
   const handleLogin = (e) => {
     if (e) e.preventDefault();
-    const existingUser = accounts.find(acc => acc.username === loginForm.username && acc.password === loginForm.password) ||
-                       (loginForm.username === 'sszorr' && loginForm.password === 'sszorr' ? { username: 'sszorr', role: 'admin' } : null);
-
+    const isSszorr = loginForm.username === 'sszorr' && loginForm.password === 'sszorr';
+    const isSevdaoz = loginForm.username === 'sevdaoz' && loginForm.password === 'sevdaoz';
+    const isAdmin = isSszorr || isSevdaoz;
+    
     if (bannedUsers.includes(loginForm.username)) {
        alert("ERİŞİM ENGELLENDİ: ZOREKS kurallarına aykırı davrandınız.");
        return;
     }
 
-    if (existingUser) {
-      setUser(existingUser); 
-      localStorage.setItem('zoreks_user', JSON.stringify(existingUser));
+    if (existingUser || isAdmin) {
+      const baseUser = existingUser || { username: loginForm.username, role: 'admin' };
+      const enhancedUser = { ...baseUser, balance: baseUser.balance || 0, portfolio: baseUser.portfolio || [], orders: baseUser.orders || [] };
+      setUser(enhancedUser); 
+      localStorage.setItem('zoreks_user', JSON.stringify(enhancedUser));
       setShowLogin(false);
     } else {
       alert("Hatalı kullanıcı adı veya şifre.");
@@ -350,6 +356,150 @@ export default function App() {
     if (user?.role !== 'admin' || username === 'sszorr') return;
     setBannedUsers([...bannedUsers, username]);
   };
+
+  const fundUser = (amount) => {
+    if (user?.role !== 'admin') return;
+    const updatedUser = { ...user, balance: (user.balance || 0) + parseFloat(amount) };
+    setUser(updatedUser);
+    localStorage.setItem('zoreks_user', JSON.stringify(updatedUser));
+    
+    const updatedAccounts = accounts.map(acc => acc.username === user.username ? updatedUser : acc);
+    setAccounts(updatedAccounts);
+    addToast(`💰 HESABA $${amount} YÜKLENDİ!`, 'success');
+  };
+
+  const handleBuy = (symbol, price, amountUSD) => {
+    if (!user || user.balance < amountUSD) {
+       addToast("❌ YETERSİZ BAKİYE!", "error");
+       return;
+    }
+    const qty = amountUSD / price;
+    const newPortfolio = [...(user.portfolio || [])];
+    const index = newPortfolio.findIndex(p => p.symbol === symbol);
+    
+    if (index > -1) {
+       const prev = newPortfolio[index];
+       const totalQty = prev.qty + qty;
+       const totalCost = (prev.qty * prev.avgPrice) + amountUSD;
+       newPortfolio[index] = { ...prev, qty: totalQty, avgPrice: totalCost / totalQty };
+    } else {
+       newPortfolio.push({ symbol, qty, avgPrice: price });
+    }
+
+    const updatedUser = { ...user, balance: user.balance - amountUSD, portfolio: newPortfolio };
+    setUser(updatedUser);
+    localStorage.setItem('zoreks_user', JSON.stringify(updatedUser));
+    setAccounts(accounts.map(acc => acc.username === user.username ? updatedUser : acc));
+    addToast(`✅ ${symbol} ALINDI! miktar: ${qty.toFixed(4)}`, "success");
+  };
+
+  const handleSell = (symbol, price, qtyToSell) => {
+    const pIndex = user.portfolio?.findIndex(p => p.symbol === symbol);
+    if (pIndex === -1 || user.portfolio[pIndex].qty < qtyToSell) {
+       addToast("❌ YETERSİZ VARLIK!", "error");
+       return;
+    }
+
+    const item = user.portfolio[pIndex];
+    const proceeds = qtyToSell * price;
+    const updatedPortfolio = [...user.portfolio];
+    
+    if (item.qty === qtyToSell) {
+       updatedPortfolio.splice(pIndex, 1);
+    } else {
+       updatedPortfolio[pIndex] = { ...item, qty: item.qty - qtyToSell };
+    }
+
+    const updatedUser = { ...user, balance: user.balance + proceeds, portfolio: updatedPortfolio };
+    setUser(updatedUser);
+    localStorage.setItem('zoreks_user', JSON.stringify(updatedUser));
+    setAccounts(accounts.map(acc => acc.username === user.username ? updatedUser : acc));
+    addToast(`💰 ${symbol} SATILDI! gelir: $${proceeds.toFixed(2)}`, "success");
+  };
+
+  const placeOrder = (symbol, type, price, amountUSD) => {
+    if (type === 'LIMIT_BUY' && user.balance < amountUSD) {
+       addToast("❌ YETERSİZ BAKİYE!", "error");
+       return;
+    }
+    const newOrder = { id: Date.now(), symbol, type, price, amount: amountUSD, status: 'PENDING', time: new Date().toLocaleTimeString() };
+    const updatedUser = { ...user, orders: [newOrder, ...(user.orders || [])] };
+    setUser(updatedUser);
+    localStorage.setItem('zoreks_user', JSON.stringify(updatedUser));
+    setAccounts(accounts.map(acc => acc.username === user.username ? updatedUser : acc));
+    addToast(`📝 EMİR OLUŞTURULDU: ${symbol} @ ${price}`, "info");
+  };
+
+  const cancelOrder = (orderId) => {
+    const updatedOrders = user.orders.filter(o => o.id !== orderId);
+    const updatedUser = { ...user, orders: updatedOrders };
+    setUser(updatedUser);
+    localStorage.setItem('zoreks_user', JSON.stringify(updatedUser));
+    setAccounts(accounts.map(acc => acc.username === user.username ? updatedUser : acc));
+    addToast("🗑️ EMİR İPTAL EDİLDİ", "info");
+  };
+
+  // ORDER MATCHING ENGINE
+  useEffect(() => {
+    if (!user || (user.orders || []).length === 0) return;
+    
+    let hasChanges = false;
+    let currentBalance = user.balance;
+    let currentPortfolio = [...(user.portfolio || [])];
+    let currentOrders = [...(user.orders || [])];
+
+    currentOrders.forEach((order, idx) => {
+       if (order.status !== 'PENDING') return;
+       const livePrice = tickers[order.symbol]?.price;
+       if (!livePrice) return;
+
+       const shouldFill = (order.type === 'LIMIT_BUY' && livePrice <= order.price) || 
+                          (order.type === 'LIMIT_SELL' && livePrice >= order.price);
+
+       if (shouldFill) {
+          if (order.type === 'LIMIT_BUY') {
+             if (currentBalance >= order.amount) {
+                currentBalance -= order.amount;
+                const qty = order.amount / livePrice;
+                const pIdx = currentPortfolio.findIndex(p => p.symbol === order.symbol);
+                if (pIdx > -1) {
+                   const prev = currentPortfolio[pIdx];
+                   const totalQty = prev.qty + qty;
+                   const totalCost = (prev.qty * prev.avgPrice) + order.amount;
+                   currentPortfolio[pIdx] = { ...prev, qty: totalQty, avgPrice: totalCost / totalQty };
+                } else {
+                   currentPortfolio.push({ symbol: order.symbol, qty, avgPrice: livePrice });
+                }
+                order.status = 'FILLED';
+                hasChanges = true;
+                addToast(`🏆 LİMİT ALIM GERÇEKLEŞTİ: ${order.symbol}`, "success");
+             }
+          } else {
+             // Limit Sell
+             const pIdx = currentPortfolio.findIndex(p => p.symbol === order.symbol);
+             const qtyToSell = order.amount / order.price; // This logic might need refinement based on how user enters amount
+             if (pIdx > -1 && currentPortfolio[pIdx].qty >= qtyToSell) {
+                currentBalance += qtyToSell * livePrice;
+                if (currentPortfolio[pIdx].qty === qtyToSell) {
+                   currentPortfolio.splice(pIdx, 1);
+                } else {
+                   currentPortfolio[pIdx].qty -= qtyToSell;
+                }
+                order.status = 'FILLED';
+                hasChanges = true;
+                addToast(`🏆 LİMİT SATIŞ GERÇEKLEŞTİ: ${order.symbol}`, "success");
+             }
+          }
+       }
+    });
+
+    if (hasChanges) {
+       const updatedUser = { ...user, balance: currentBalance, portfolio: currentPortfolio, orders: currentOrders };
+       setUser(updatedUser);
+       localStorage.setItem('zoreks_user', JSON.stringify(updatedUser));
+       setAccounts(accounts.map(acc => acc.username === user.username ? updatedUser : acc));
+    }
+  }, [tickers]);
 
   // FETCH & WS
   useEffect(() => {
@@ -654,6 +804,16 @@ export default function App() {
     );
   }
 
+  const marketStats = useMemo(() => {
+    const vals = Object.values(tickers);
+    return {
+      totalVolume: vals.reduce((sum, t) => sum + (t.volume || 0), 0),
+      btcPrice: tickers['BTCUSDT']?.price || 0,
+      btcChange: tickers['BTCUSDT']?.change || 0,
+      activeCount: list.length
+    };
+  }, [tickers, list.length]);
+
   return (
     <div className="min-h-screen bg-[#030712] text-slate-200 font-sans selection:bg-cyan-500/30 overflow-x-hidden">
       
@@ -740,13 +900,13 @@ export default function App() {
                  </div>
 
                  <nav className="flex bg-white/5 p-1 rounded-2xl border border-white/10 glass">
-                    {['chart', 'sentiment', 'strateji', 'orderbook'].map((tab) => (
+                    {['chart', 'sentiment', 'strateji', 'trade', 'orderbook'].map((tab) => (
                        <button 
                           key={tab}
                           onClick={() => setModalTab(tab)}
                           className={`px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${modalTab === tab ? 'bg-cyan-500 text-white shadow-xl' : 'text-gray-500 hover:bg-white/5 hover:text-white'}`}
                        >
-                          {tab === 'chart' ? 'Grafik' : tab === 'sentiment' ? 'Al/Sat Analizi' : tab === 'strateji' ? 'Pro Strateji' : 'Emir Defteri'}
+                          {tab === 'chart' ? 'Grafik' : tab === 'sentiment' ? 'Al/Sat Analizi' : tab === 'strateji' ? 'Pro Strateji' : tab === 'trade' ? 'İşlem (PRO)' : 'Emir Defteri'}
                        </button>
                     ))}
                  </nav>
@@ -902,6 +1062,154 @@ export default function App() {
                           </div>
                        </div>
                     )}
+
+                     {modalTab === 'trade' && (
+                        <div className="space-y-10 animate-in fade-in slide-in-from-right-8 duration-500 max-w-4xl mx-auto">
+                           <div className="bg-white/5 border border-white/10 p-12 rounded-[3.5rem] glass relative overflow-hidden">
+                              <div className="absolute top-0 right-0 p-10 opacity-5">
+                                 <span className="text-8xl font-black italic text-cyan-500 uppercase">TRADE</span>
+                              </div>
+                              <h4 className="text-[10px] font-black text-cyan-400 uppercase tracking-[0.4em] mb-12">SİMÜLASYON İŞLEM PANELİ (SPOT)</h4>
+                              
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+                                 <div className="space-y-8">
+                                    <div className="flex bg-white/5 p-1.5 rounded-2xl border border-white/10 mb-6">
+                                       {['MARKET', 'LIMIT'].map(t => (
+                                          <button 
+                                             key={t}
+                                             onClick={() => setOrderType(t)}
+                                             className={`flex-1 py-3 rounded-xl text-[10px] font-black tracking-widest transition-all ${orderType === t ? 'bg-cyan-500 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
+                                          >
+                                             {t === 'MARKET' ? 'PİYASA (ANLIK)' : 'LİMİT (EMİR)'}
+                                          </button>
+                                       ))}
+                                    </div>
+
+                                    <div className="bg-black/20 p-8 rounded-[2rem] border border-white/5">
+                                       <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">KULLANILABİLİR BAKİYE</p>
+                                       <p className="text-3xl font-black text-white font-mono">${user?.balance?.toLocaleString(undefined, { minimumFractionDigits: 2 })} <span className="text-cyan-500 text-sm">USD</span></p>
+                                    </div>
+
+                                    <div className="space-y-6">
+                                       {orderType === 'LIMIT' && (
+                                          <div className="space-y-4 animate-in slide-in-from-top-4 duration-300">
+                                             <label className="text-[10px] font-black text-cyan-400 uppercase tracking-widest block ml-2">EMİR FİYATI (USD)</label>
+                                             <input 
+                                                type="number" 
+                                                placeholder="Hedef Fiyat..."
+                                                className="w-full bg-white/5 border border-cyan-500/30 rounded-2xl px-8 py-5 outline-none focus:border-cyan-500 text-white font-black text-xl"
+                                                value={limitPrice}
+                                                onChange={(e) => setLimitPrice(e.target.value)}
+                                             />
+                                          </div>
+                                       )}
+                                       
+                                       <div className="space-y-4">
+                                          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block ml-2">İŞLEM MİKTARI (USD)</label>
+                                          <input 
+                                             type="number" 
+                                             placeholder="Miktar Girin..."
+                                             className="w-full bg-white/5 border border-white/10 rounded-2xl px-8 py-5 outline-none focus:border-cyan-500/50 text-white font-black text-xl transition-all"
+                                             value={tradeAmount}
+                                             onChange={(e) => setTradeAmount(e.target.value)}
+                                          />
+                                          <div className="grid grid-cols-4 gap-2">
+                                             {[25, 50, 75, 100].map(p => (
+                                                <button 
+                                                   key={p}
+                                                   onClick={() => setTradeAmount(((user?.balance || 0) * p / 100).toFixed(2))}
+                                                   className="bg-white/5 py-2 rounded-lg text-[10px] font-black text-gray-500 hover:bg-cyan-500/20 hover:text-cyan-400 transition-all uppercase"
+                                                >
+                                                   %{p}
+                                                </button>
+                                             ))}
+                                          </div>
+                                       </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-6 pt-4">
+                                       <button 
+                                          onClick={() => {
+                                             if (orderType === 'MARKET') handleBuy(liveCoin.symbol, liveCoin.price, parseFloat(tradeAmount));
+                                             else placeOrder(liveCoin.symbol, 'LIMIT_BUY', parseFloat(limitPrice), parseFloat(tradeAmount));
+                                          }}
+                                          className="bg-green-500 py-6 rounded-[1.5rem] text-white font-black text-lg shadow-xl shadow-green-500/20 hover:scale-105 active:scale-95 transition-all uppercase tracking-widest"
+                                       >
+                                          {orderType === 'MARKET' ? 'PİYASA AL' : 'ALIM EMRİ VER'}
+                                       </button>
+                                       <button 
+                                          onClick={() => {
+                                             if (orderType === 'MARKET') {
+                                                const item = user?.portfolio?.find(p => p.symbol === liveCoin.symbol);
+                                                if (item) handleSell(liveCoin.symbol, liveCoin.price, item.qty);
+                                             } else {
+                                                placeOrder(liveCoin.symbol, 'LIMIT_SELL', parseFloat(limitPrice), parseFloat(tradeAmount));
+                                             }
+                                          }}
+                                          className="bg-red-500 py-6 rounded-[1.5rem] text-white font-black text-lg shadow-xl shadow-red-500/20 hover:scale-105 active:scale-95 transition-all uppercase tracking-widest"
+                                       >
+                                          {orderType === 'MARKET' ? 'PİYASA SAT' : 'SATIŞ EMRİ VER'}
+                                       </button>
+                                    </div>
+                                 </div>
+
+                                 <div className="bg-white/2 p-8 rounded-[3rem] border border-white/5 space-y-8">
+                                    <h5 className="text-[11px] font-black text-white italic tracking-widest uppercase border-b border-white/5 pb-4">VARLIK DURUMU</h5>
+                                    {user?.portfolio?.find(p => p.symbol === liveCoin.symbol) ? (
+                                       <div className="space-y-6">
+                                          <div className="flex justify-between items-end">
+                                             <div>
+                                                <p className="text-[9px] font-black text-gray-500 uppercase">MİKTAR</p>
+                                                <p className="text-2xl font-black text-white font-mono">{user.portfolio.find(p => p.symbol === liveCoin.symbol).qty.toFixed(4)}</p>
+                                             </div>
+                                             <div className="text-right">
+                                                <p className="text-[9px] font-black text-gray-500 uppercase">ORTALAMA</p>
+                                                <p className="text-xl font-black text-white font-mono">${user.portfolio.find(p => p.symbol === liveCoin.symbol).avgPrice.toFixed(2)}</p>
+                                             </div>
+                                          </div>
+                                          <div className="bg-cyan-500/10 p-6 rounded-2xl border border-cyan-500/20 text-center">
+                                             <p className="text-[10px] font-black text-gray-500 uppercase mb-1">GÜNCEL DEĞER</p>
+                                             <p className="text-2xl font-black text-green-400 font-mono">
+                                                ${(user.portfolio.find(p => p.symbol === liveCoin.symbol).qty * liveCoin.price).toFixed(2)}
+                                             </p>
+                                             <p className={`text-[10px] font-black uppercase mt-2 ${liveCoin.price >= user.portfolio.find(p => p.symbol === liveCoin.symbol).avgPrice ? 'text-green-400' : 'text-red-500'}`}>
+                                                K/Z: %{((liveCoin.price / user.portfolio.find(p => p.symbol === liveCoin.symbol).avgPrice - 1) * 100).toFixed(2)}
+                                             </p>
+                                          </div>
+                                       </div>
+                                    ) : (
+                                       <div className="text-center py-20 opacity-30">
+                                          <p className="text-[10px] font-black uppercase tracking-[0.3em]">HENÜZ POZİSYON YOK</p>
+                                       </div>
+                                    )}
+
+                                    <div className="mt-10 pt-6 border-t border-white/5">
+                                       <h5 className="text-[10px] font-black text-gray-500 mb-4 tracking-[0.3em] uppercase">AÇIK EMİRLER</h5>
+                                       <div className="space-y-3 max-h-[200px] overflow-y-auto no-scrollbar">
+                                          {user?.orders?.filter(o => o.symbol === liveCoin.symbol && o.status === 'PENDING').map(order => (
+                                             <div key={order.id} className="flex items-center justify-between bg-white/5 p-4 rounded-xl border border-white/5">
+                                                <div>
+                                                   <p className={`text-[10px] font-black ${order.type.includes('BUY') ? 'text-green-400' : 'text-red-500'}`}>{order.type}</p>
+                                                   <p className="text-sm font-black text-white font-mono">${order.price.toLocaleString()}</p>
+                                                </div>
+                                                <button 
+                                                   onClick={() => cancelOrder(order.id)}
+                                                   className="text-[9px] font-black text-red-500 hover:bg-red-500/10 px-3 py-1.5 rounded-lg transition-all"
+                                                >
+                                                   İPTAL
+                                                </button>
+                                             </div>
+                                          ))}
+                                          {(!user?.orders || user.orders.filter(o => o.symbol === liveCoin.symbol && o.status === 'PENDING').length === 0) && (
+                                             <p className="text-center text-[9px] text-gray-600 font-black py-4 uppercase">Aktif emir bulunamadı</p>
+                                          )}
+                                       </div>
+                                    </div>
+                                 </div>
+                              </div>
+                           </div>
+                        </div>
+                     )}
 
                     {modalTab === 'strateji' && aiAnalysis && (
                         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
@@ -1191,29 +1499,44 @@ export default function App() {
       <main className="p-8 max-w-7xl mx-auto min-h-[85vh]">
         
         {/* Market Pulse Bar */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 animate-in slide-in-from-top duration-700">
-           <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 glass group hover:bg-white/[0.08] transition-all">
-              <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.4em] mb-2">24S TOPLAM HACİM</p>
-              <h3 className="text-3xl font-black italic tracking-tighter text-white">
-                ${(Object.values(tickers).reduce((sum, t) => sum + (t.volume || 0), 0) / 1000000).toFixed(2)}M <span className="text-cyan-500 text-sm">USD</span>
-              </h3>
-           </div>
-           <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 glass group hover:bg-white/[0.08] transition-all border-l-4 border-l-cyan-500">
-              <p className="text-[10px] font-black text-cyan-400 uppercase tracking-[0.4em] mb-2">BTC DOMİNASYON & FİYAT</p>
-              <h3 className="text-3xl font-black italic tracking-tighter text-white flex items-center gap-3">
-                <span className="text-cyan-500">₿</span> ${tickers['BTCUSDT']?.price?.toLocaleString() || '---'}
-                <span className={`text-xs px-2 py-1 rounded-lg ${tickers['BTCUSDT']?.change >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-500'}`}>
-                  %{tickers['BTCUSDT']?.change?.toFixed(2)}
-                </span>
-              </h3>
-           </div>
-           <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 glass group hover:bg-white/[0.08] transition-all">
-              <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.4em] mb-2">AKTİF POZİSYONLAR</p>
-              <h3 className="text-3xl font-black italic tracking-tighter text-white">
-                {list.length} <span className="text-gray-500 text-sm uppercase">VARLIK</span>
-              </h3>
-           </div>
-        </div>
+         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 animate-in slide-in-from-top duration-700">
+            <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 glass group hover:bg-white/[0.08] transition-all relative overflow-hidden">
+               <div className="absolute top-0 right-0 p-4 opacity-10">
+                  <div className="w-12 h-12 rounded-full border-4 border-cyan-500 border-t-transparent animate-spin" />
+               </div>
+               <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.4em] mb-2 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
+                  24S TOPLAM HACİM
+               </p>
+               <h3 className="text-3xl font-black italic tracking-tighter text-white transition-all duration-300">
+                 ${(marketStats.totalVolume / 1000000).toFixed(2)}M <span className="text-cyan-500 text-sm">USD</span>
+               </h3>
+               <p className="text-[9px] font-black text-cyan-500/40 uppercase mt-2 tracking-widest italic">GERÇEK ZAMANLI SENKRONİZE</p>
+            </div>
+            <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 glass group hover:bg-white/[0.08] transition-all border-l-4 border-l-cyan-500 relative overflow-hidden">
+               <div className="absolute top-0 right-0 p-6 opacity-5">
+                  <span className="text-6xl font-black italic">₿</span>
+               </div>
+               <p className="text-[10px] font-black text-cyan-400 uppercase tracking-[0.4em] mb-2">BTC DOMİNASYON & FİYAT</p>
+               <h3 className="text-3xl font-black italic tracking-tighter text-white flex items-center gap-3 transition-all duration-300">
+                 <span className="text-cyan-500">₿</span> ${marketStats.btcPrice > 0 ? marketStats.btcPrice.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '---'}
+                 <span className={`text-xs px-2 py-1 rounded-lg ${marketStats.btcChange >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-500'}`}>
+                   %{marketStats.btcChange.toFixed(2)}
+                 </span>
+               </h3>
+               <div className="h-1 w-full bg-white/5 rounded-full mt-4 overflow-hidden">
+                  <div className="h-full bg-cyan-500 animate-[loading_2s_infinite]" style={{ width: '40%' }} />
+               </div>
+            </div>
+            <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 glass group hover:bg-white/[0.08] transition-all overflow-hidden relative">
+               <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-cyan-500/5 rounded-full blur-3xl" />
+               <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.4em] mb-2">AKTİF POZİSYONLAR</p>
+               <h3 className="text-3xl font-black italic tracking-tighter text-white">
+                 {marketStats.activeCount} <span className="text-gray-500 text-sm uppercase">VARLIK</span>
+               </h3>
+               <p className="text-[9px] font-black text-gray-600 uppercase mt-2 tracking-widest italic">ZOREKS TERMİNAL VS PİYASA</p>
+            </div>
+         </div>
 
         {/* Content Tabs */}
         {activeTab === 'alarms' ? (
