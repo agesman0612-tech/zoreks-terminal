@@ -303,6 +303,7 @@ export default function App() {
 
   const handleLogin = (e) => {
     if (e) e.preventDefault();
+    const existingUser = accounts.find(acc => acc.username === loginForm.username && acc.password === loginForm.password);
     const isSszorr = loginForm.username === 'sszorr' && loginForm.password === 'sszorr';
     const isSevdaoz = loginForm.username === 'sevdaoz' && loginForm.password === 'sevdaoz';
     const isAdmin = isSszorr || isSevdaoz;
@@ -319,7 +320,7 @@ export default function App() {
       localStorage.setItem('zoreks_user', JSON.stringify(enhancedUser));
       setShowLogin(false);
     } else {
-      alert("Hatalı kullanıcı adı veya şifre.");
+      alert("Hatalı kullanıcı adı veya şifre. (v4.0.1)");
     }
   };
 
@@ -1440,7 +1441,7 @@ export default function App() {
             <h1 className="text-4xl font-black italic tracking-tighter uppercase text-white leading-none">ZOREKS</h1>
             <div className="flex items-center gap-2 mt-1">
                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-               <span className="text-[9px] font-black text-gray-600 tracking-[0.5em] uppercase">{status} ANALİZ</span>
+               <span className="text-[9px] font-black text-gray-600 tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.1</span>
             </div>
           </div>
         </div>
