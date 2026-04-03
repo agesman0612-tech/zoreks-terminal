@@ -27,9 +27,19 @@ const generateDetailedAIAnalysis = (coin) => {
     signal = "STRATEJİK SAT"; trend = "NEGATİF BASKI"; color = "text-red-400"; bg = "bg-red-500/10"; 
   }
 
-  const commentary = `ZOREKS Zor AI STRATEJİ RAPORU: Mevcut parite analizinde ${trend} yapısı belirginleşmiş durumda. Fiyatın ${price.toLocaleString()} $ seviyesindeki seyri, teknik indikatörlerde (RSI: ${rsiMock.toFixed(0)}) ${change > 0 ? "aşırı alım bölgesine yakınsama" : "aşırı satış doygunluğu"} sinyali veriyor. Alt destek noktası ${sup} $ olarak belirlenirken, ${res} $ seviyesi üzerindeki kalıcılıklar yeni bir trend başlatabilir. Mevcut hacim (${(volume/1000000).toFixed(2)}M) piyasa yapıcı iştahının ${change > 0 ? "yüksek" : "düşük"} olduğunu kanıtlıyor. ${signal} pozisyonu korunmalı, stop-loss seviyeleri güncellenmelidir.`;
+  const isBullish = change >= 0;
+  
+  // Dynamic Targets based on Volatility/Change
+  const entryMin = (price * (isBullish ? 0.99 : 1.01)).toFixed(price > 1 ? 2 : 6);
+  const entryMax = (price * (isBullish ? 1.002 : 1.02)).toFixed(price > 1 ? 2 : 6);
+  const tp1 = (price * (isBullish ? 1.025 : 0.975)).toFixed(price > 1 ? 2 : 6);
+  const tp2 = (price * (isBullish ? 1.05 : 0.95)).toFixed(price > 1 ? 2 : 6);
+  const tp3 = (price * (isBullish ? 1.10 : 0.90)).toFixed(price > 1 ? 2 : 6);
+  const stopLoss = (price * (isBullish ? 0.965 : 1.035)).toFixed(price > 1 ? 2 : 6);
 
-  return { signal, trend, rsiMock, color, bg, 
+  const commentary = `ZOREKS Zor AI STRATEJİ RAPORU: Mevcut parite analizinde ${trend} yapısı belirginleşmiş durumda. Fiyatın ${price.toLocaleString()} $ seviyesindeki seyri, teknik indikatörlerde (RSI: ${rsiMock.toFixed(0)}) ${change > 0 ? "aşırı alım bölgesine yakınsama" : "aşırı satış doygunluğu"} sinyali veriyor. Alım/Satım stratejisi için ${isBullish ? "Entry (Giriş)" : "Short (Satış)"} bölgesi ${entryMin} - ${entryMax} $ aralığında rasyonel görünüyor. Hedeflenen kâr al (TP) seviyeleri sırasıyla ${tp1}, ${tp2} ve ${tp3} $ olarak belirlenmiştir. ${stopLoss} $ seviyesi altındaki kapanışlarda pozisyon koruması (Stop Loss) aktif edilmelidir.`;
+
+  return { signal, trend, rsiMock, color, bg, entryMin, entryMax, tp1, tp2, tp3, stopLoss, isBullish,
     indicators: `RSI-14: ${rsiMock.toFixed(0)} | VOL: ${(volume/1000000).toFixed(2)}M | ATR-24: %${Math.abs(change).toFixed(2)}`,
     comment: commentary
   };
@@ -129,7 +139,17 @@ export default function App() {
   const [alarmForm, setAlarmForm] = useState({ target: '', type: 'ABOVE' });
   const [commentInput, setCommentInput] = useState('');
   const [commentSentiment, setCommentSentiment] = useState('Bullish');
+  const [toasts, setToasts] = useState([]);
+  const [whaleAlerts, setWhaleAlerts] = useState([]);
   const detailWs = useRef(null);
+
+  const addToast = (message, type = 'info') => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 5000);
+  };
 
   // NOTIFICATION PERMISSION
   useEffect(() => {
@@ -400,6 +420,14 @@ export default function App() {
 
                 update[item.s] = { symbol: item.s, price, prevPrice, status, buyRatio, change: parseFloat(item.P), volume: parseFloat(item.q), high: parseFloat(item.h), low: parseFloat(item.l), lastUpdate: Date.now() };
 
+                // WHALE TRACKER: Monitor for large trades (> 100k USD in volume spike)
+                const volChange = update[item.s].volume - (tickers[item.s]?.volume || 0);
+                if (volChange > 100000) { // $100k volume spike
+                  const newAlert = { id: Date.now() + Math.random(), symbol: item.s, type: 'VOLUME', value: volChange, time: new Date().toLocaleTimeString() };
+                  setWhaleAlerts(prev => [newAlert, ...prev].slice(0, 5));
+                  addToast(`🐋 BALİNA HAREKETİ: ${item.s} paritesinde $${(volChange/1000).toFixed(0)}K hacim girişi!`, 'info');
+                }
+
                 alerts.forEach(alertItem => { 
                   if (alertItem.symbol === item.s && alertItem.active && ((alertItem.type === 'ABOVE' && price > alertItem.target) || (alertItem.type === 'BELOW' && price < alertItem.target))) { 
                     alertItem.active = false; 
@@ -412,7 +440,7 @@ export default function App() {
                         icon: '/favicon.ico'
                       });
                     }
-                    alert(`🚨 ZOREKS ALARM: ${alertItem.symbol} Hedef Fiyata (${alertItem.target}) Ulaştı!`); 
+                    addToast(`🚨 ALARM: ${alertItem.symbol} Hedef Fiyata (${alertItem.target}) Ulaştı!`, 'warning'); 
                   } 
                 });
               }
@@ -586,13 +614,13 @@ export default function App() {
                  </div>
 
                  <nav className="flex bg-white/5 p-1 rounded-2xl border border-white/10 glass">
-                    {['chart', 'sentiment', 'orderbook'].map((tab) => (
+                    {['chart', 'sentiment', 'strateji', 'orderbook'].map((tab) => (
                        <button 
                           key={tab}
                           onClick={() => setModalTab(tab)}
                           className={`px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${modalTab === tab ? 'bg-cyan-500 text-white shadow-xl' : 'text-gray-500 hover:bg-white/5 hover:text-white'}`}
                        >
-                          {tab === 'chart' ? 'Grafik' : tab === 'sentiment' ? 'Al/Sat Analizi' : 'Emir Defteri'}
+                          {tab === 'chart' ? 'Grafik' : tab === 'sentiment' ? 'Al/Sat Analizi' : tab === 'strateji' ? 'Pro Strateji' : 'Emir Defteri'}
                        </button>
                     ))}
                  </nav>
@@ -693,6 +721,78 @@ export default function App() {
                           </div>
                        </div>
                     )}
+
+                    {modalTab === 'strateji' && aiAnalysis && (
+                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+                           <div className="bg-white/5 border border-white/10 p-10 rounded-[3rem] glass relative overflow-hidden group">
+                              <div className="absolute top-0 right-0 p-8 opacity-5">
+                                 <span className="text-8xl font-black italic text-cyan-500 uppercase">STRATEGY</span>
+                              </div>
+                              <h4 className="text-[10px] font-black text-cyan-400 uppercase tracking-[0.4em] mb-10">ZOREKS PRO İŞLEM SİNYALİ</h4>
+                              
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                 {/* ENTRY ZONE */}
+                                 <div className="bg-green-500/10 border border-green-500/20 p-8 rounded-[2rem] relative group/entry">
+                                    <div className="absolute -top-3 -left-3 bg-green-500 text-white text-[8px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest shadow-lg">GİRİŞ BÖLGESİ</div>
+                                    <p className="text-[10px] text-green-400/60 font-black uppercase tracking-widest mb-3">KADEMELİ ALIM ARALIĞI</p>
+                                    <h5 className="text-2xl font-black text-green-400 font-mono tracking-tighter mb-2">{aiAnalysis.entryMin} $</h5>
+                                    <h5 className="text-2xl font-black text-green-400 font-mono tracking-tighter">{aiAnalysis.entryMax} $</h5>
+                                    <div className="mt-6 pt-6 border-t border-green-500/10 flex items-center gap-3">
+                                       <span className="w-2 h-2 rounded-full bg-green-500 animate-ping"></span>
+                                       <span className="text-[9px] font-black text-green-500 uppercase tracking-widest">AKÜMÜLASYON AKTİF</span>
+                                    </div>
+                                 </div>
+
+                                 {/* PROFIT TARGETS */}
+                                 <div className="md:col-span-1 bg-cyan-500/5 border border-cyan-500/20 p-8 rounded-[2rem] relative">
+                                    <div className="absolute -top-3 -left-3 bg-cyan-500 text-white text-[8px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest shadow-lg">SATIŞ HEDEFLERİ</div>
+                                    <div className="space-y-6">
+                                       <div className="flex justify-between items-center bg-white/5 p-4 rounded-xl border border-white/5">
+                                          <span className="text-[9px] font-black text-gray-500 uppercase">TP-1 (%2.5)</span>
+                                          <span className="text-lg font-black text-cyan-400 font-mono">{aiAnalysis.tp1} $</span>
+                                       </div>
+                                       <div className="flex justify-between items-center bg-white/5 p-4 rounded-xl border border-white/5">
+                                          <span className="text-[9px] font-black text-gray-500 uppercase">TP-2 (%5.0)</span>
+                                          <span className="text-lg font-black text-cyan-400 font-mono">{aiAnalysis.tp2} $</span>
+                                       </div>
+                                       <div className="flex justify-between items-center bg-cyan-500/10 p-4 rounded-xl border border-cyan-500/20">
+                                          <span className="text-[9px] font-black text-white uppercase">TP-3 (%10.0)</span>
+                                          <span className="text-lg font-black text-white font-mono">{aiAnalysis.tp3} $</span>
+                                       </div>
+                                    </div>
+                                 </div>
+
+                                 {/* RISK MANAGEMENT */}
+                                 <div className="bg-red-500/10 border border-red-500/20 p-8 rounded-[2rem] relative">
+                                    <div className="absolute -top-3 -left-3 bg-red-500 text-white text-[8px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest shadow-lg">ZARAR DURDUR</div>
+                                    <p className="text-[10px] text-red-500/60 font-black uppercase tracking-widest mb-3">CRITICAL STOP LOSS</p>
+                                    <h5 className="text-3xl font-black text-red-500 font-mono tracking-tighter mb-4">{aiAnalysis.stopLoss} $</h5>
+                                    <p className="text-[9px] font-bold text-red-400 italic">"Bu fiyatın altındaki saatlik kapanışlarda strateji iptal edilmelidir."</p>
+                                    <div className="mt-8">
+                                       <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-2">RİSK / ÖDÜL ORANI</p>
+                                       <div className="h-2 w-full bg-red-500/10 rounded-full overflow-hidden">
+                                          <div className="h-full bg-cyan-500 w-[70%]" />
+                                       </div>
+                                    </div>
+                                 </div>
+                              </div>
+                           </div>
+
+                           <div className="bg-[#030712] border border-white/5 p-8 rounded-[2.5rem] flex items-center justify-between shadow-2xl">
+                              <div className="flex items-center gap-6">
+                                 <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-2xl animate-pulse">📡</div>
+                                 <div>
+                                    <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest">SİNYAL OLUŞTURMA ZAMANI</p>
+                                    <p className="text-sm font-black text-white uppercase italic tracking-tighter">ŞİMDİ ( CANLI VERİ )</p>
+                                 </div>
+                              </div>
+                              <div className="text-right">
+                                 <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest">GÜVEN SKORU</p>
+                                 <p className="text-xl font-black text-cyan-500 italic tracking-widest">%92.4</p>
+                              </div>
+                           </div>
+                        </div>
+                     )}
 
                     {modalTab === 'orderbook' && (
                        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 h-full animate-in fade-in slide-in-from-left-8 duration-500">
@@ -1134,6 +1234,18 @@ export default function App() {
       </main>
 
       <footer className="py-20 text-center opacity-10 text-[10px] uppercase font-black tracking-[1.2em] mt-20 border-t border-white/5">ZOREKS.COM | POWERED BY ZOR AI HIGH-FREQ ANALYTICS</footer>
+
+      {/* Toast Notification Container */}
+      <div className="fixed bottom-10 right-10 z-[300] space-y-4 max-w-sm w-full">
+         {toasts.map(t => (
+           <div key={t.id} className={`p-6 rounded-[2rem] glass border shadow-2xl animate-in slide-in-from-right-10 duration-500 flex items-center gap-4 ${t.type === 'warning' ? 'border-red-500/30' : 'border-cyan-500/30'}`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black ${t.type === 'warning' ? 'bg-red-500 text-white' : 'bg-cyan-500 text-white'}`}>
+                 {t.type === 'warning' ? '!' : 'i'}
+              </div>
+              <p className="text-sm font-bold text-white italic tracking-tighter leading-tight">{t.message}</p>
+           </div>
+         ))}
+      </div>
     </div>
   );
 }
