@@ -1,6 +1,12 @@
 @import "tailwindcss";
 
 @layer base {
+  html, body {
+    @apply overflow-x-hidden w-full max-w-[100vw] m-0 p-0;
+  }
+  #root {
+    @apply overflow-x-hidden w-full max-w-full;
+  }
   body {
     @apply bg-[#030712] text-slate-100 antialiased font-sans selection:bg-cyan-500/30;
   }
