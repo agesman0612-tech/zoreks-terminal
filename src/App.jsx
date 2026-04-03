@@ -123,6 +123,7 @@ export default function App() {
   const [recentTrades, setRecentTrades] = useState([]);
   const [fundingRate, setFundingRate] = useState(null);
   const [longShortData, setLongShortData] = useState(null);
+  const [aiAnalysis, setAiAnalysis] = useState(null);
   const [modalTab, setModalTab] = useState('chart');
   const [showAlarmModal, setShowAlarmModal] = useState(false);
   const [alarmForm, setAlarmForm] = useState({ target: '', type: 'ABOVE' });
@@ -142,14 +143,14 @@ export default function App() {
   const [showLogin, setShowLogin] = useState(!localStorage.getItem('zoreks_user'));
   const [isRegistering, setIsRegistering] = useState(false);
   const [loginForm, setLoginForm] = useState({ username: '', email: '', password: '' });
+  const [alerts, setAlerts] = useState(JSON.parse(localStorage.getItem('zoreks_alerts')) || []);
+  const [bannedUsers, setBannedUsers] = useState(JSON.parse(localStorage.getItem('zoreks_bans')) || []);
 
   // COMMUNITY & ADMIN DATA
   const [comments, setComments] = useState(JSON.parse(localStorage.getItem('zoreks_comments')) || [
     { id: 1, user: "Balina", text: "BTC 70k hedefim rasyonel bir teknik beklenti.", time: "2 dk", sentiment: "Bullish" },
     { id: 2, user: "Ayı", text: "Makroekonomik veriler baskıyı artırabilir.", time: "5 dk", sentiment: "Bearish" },
   ]);
-  const [bannedUsers, setBannedUsers] = useState(JSON.parse(localStorage.getItem('zoreks_bans')) || []);
-  const [alerts, setAlerts] = useState(JSON.parse(localStorage.getItem('zoreks_alerts')) || []);
   const [news, setNews] = useState([
     { 
       id: 1, 
@@ -1098,28 +1099,6 @@ export default function App() {
                             <span className="group-hover:text-cyan-400 transition-colors uppercase italic">{item.sourceName}</span>
                             <span>{item.time} ÖNCE</span>
                          </div>
-                      </div>
-                   </div>
-                ))}
-             </div>
-          </div>
-        ) : activeTab === 'yorumlar' ? (
-          <div className="max-w-4xl mx-auto space-y-8">
-             <div className="flex gap-4 p-8 bg-white/5 border border-white/10 rounded-[3rem] glass shadow-2xl">
-                <input type="text" id="commInput2" placeholder="Topluluğa bir strateji bırak..." className="flex-1 bg-white/5 border border-white/5 rounded-2xl px-8 py-5 outline-none focus:border-cyan-500 font-bold" />
-                <button onClick={() => { const inp = document.getElementById('commInput2'); if(inp.value) setComments([{ id: Date.now(), user: user.username, text: inp.value, time: "AZ ÖNCE", sentiment: "Bullish" }, ...comments]); inp.value=''; }} className="bg-cyan-500 px-12 rounded-[1.5rem] font-black text-white shadow-[0_0_20px_rgba(6,182,212,0.4)]">YAYINLA</button>
-             </div>
-             <div className="space-y-6">
-                {comments.map(c => (
-                   <div key={c.id} className="bg-white/5 p-8 rounded-[2.5rem] border border-white/10 flex gap-8 items-start glass hover:bg-white/[0.08] transition-all">
-                      <div className="w-14 h-14 rounded-[1.25rem] bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center font-black text-2xl italic text-white shadow-2xl">{c.user.charAt(0)}</div>
-                      <div className="flex-1">
-                         <div className="flex justify-between items-start mb-3">
-                            <span className="font-black text-cyan-400 text-base uppercase tracking-tighter italic">{c.user}</span>
-                            {user?.role === 'admin' && <button onClick={() => deleteComment(c.id)} className="text-[10px] font-black bg-red-500/20 text-red-400 px-4 py-1.5 rounded-full hover:bg-red-500 hover:text-white transition-all uppercase tracking-widest">Yorumu İndir</button>}
-                         </div>
-                         <p className="text-xl text-gray-300 font-medium italic leading-relaxed">"{c.text}"</p>
-                         <span className="text-[10px] font-black text-gray-700 uppercase block mt-6 tracking-widest">{c.time} • ZOREKS ONAYLI KULLANICI</span>
                       </div>
                    </div>
                 ))}
