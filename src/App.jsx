@@ -827,6 +827,24 @@ export default function App() {
     };
   }, [tickers, list.length]);
 
+  // LOADING SPLASH - prevents black screen after login while data loads
+  if (!showLogin && Object.keys(tickers).length === 0) {
+    return (
+      <div className="min-h-screen bg-[#030712] flex flex-col items-center justify-center p-6 animate-in fade-in duration-500">
+         <div className="w-20 h-20 bg-cyan-500 rounded-3xl flex items-center justify-center shadow-[0_0_60px_rgba(6,182,212,0.5)] mb-8 animate-pulse">
+            <span className="font-black text-white text-4xl italic tracking-tighter">ZX</span>
+         </div>
+         <h1 className="text-3xl font-black italic tracking-tighter text-white mb-3">ZOREKS</h1>
+         <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.5em] animate-pulse">VERİ AKIŞI SAĞLANIYOR...</p>
+         <div className="mt-8 flex gap-2">
+            <div className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce" style={{animationDelay: '0ms'}} />
+            <div className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce" style={{animationDelay: '150ms'}} />
+            <div className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce" style={{animationDelay: '300ms'}} />
+         </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#030712] text-slate-200 font-sans selection:bg-cyan-500/30 overflow-x-hidden">
       
@@ -1490,7 +1508,7 @@ export default function App() {
                <h1 className="text-2xl md:text-4xl font-black italic tracking-tighter uppercase text-white leading-none">ZOREKS</h1>
                <div className="flex items-center gap-2 mt-1">
                   <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                  <span className="text-[8px] md:text-[9px] font-black text-gray-600 tracking-[0.3em] md:tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.20</span>
+                  <span className="text-[8px] md:text-[9px] font-black text-gray-600 tracking-[0.3em] md:tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.21</span>
                </div>
              </div>
           </div>
