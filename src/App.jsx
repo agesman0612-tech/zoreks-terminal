@@ -360,19 +360,19 @@ export default function App() {
           const update = {};
           data.forEach(item => { 
             if (item?.symbol?.endsWith('USDT')) {
-              const totalBase = parseFloat(item.volume);
-              const takerBase = parseFloat(item.takerBuyBaseAssetVolume);
+              const totalBase = parseFloat(item.volume) || 0;
+              const takerBase = parseFloat(item.takerBuyBaseAssetVolume) || 0;
               const buyRatio = totalBase > 0 ? (takerBase / totalBase) * 100 : 50;
               
               update[item.symbol] = { 
                 symbol: item.symbol, 
-                price: parseFloat(item.lastPrice), 
-                change: parseFloat(item.priceChangePercent), 
-                volume: parseFloat(item.quoteVolume), 
-                buyVol: parseFloat(item.takerBuyQuoteAssetVolume),
-                buyRatio: buyRatio,
-                high: parseFloat(item.highPrice), 
-                low: parseFloat(item.lowPrice) 
+                price: parseFloat(item.lastPrice) || 0, 
+                change: parseFloat(item.priceChangePercent) || 0, 
+                volume: parseFloat(item.quoteVolume) || 0, 
+                buyVol: parseFloat(item.takerBuyQuoteAssetVolume) || 0,
+                buyRatio: !isNaN(buyRatio) ? buyRatio : 50,
+                high: parseFloat(item.highPrice) || 0, 
+                low: parseFloat(item.lowPrice) || 0 
               }; 
             }
           });
@@ -452,9 +452,11 @@ export default function App() {
                 const price = parseFloat(item.c);
                 const prevPrice = tickers[item.s]?.price || price;
                 const status = price > prevPrice ? 'up' : price < prevPrice ? 'down' : tickers[item.s]?.status || 'stable';
-                const totalBaseVol = parseFloat(item.v);
-                const takerBuyBaseVol = parseFloat(item.V);
-                const buyRatio = totalBaseVol > 0 ? (takerBuyBaseVol / totalBaseVol) * 100 : 50;
+                const totalBaseVol = parseFloat(item.v) || 0;
+                const takerBuyBaseVol = parseFloat(item.V) || 0;
+                const rawBuyRatio = totalBaseVol > 0 ? (takerBuyBaseVol / totalBaseVol) * 100 : 50;
+                const buyRatio = !isNaN(rawBuyRatio) ? rawBuyRatio : 50;
+                const buyVol = parseFloat(item.Q) || 0;
 
                 update[item.s] = { 
                   symbol: item.s, 
@@ -462,11 +464,11 @@ export default function App() {
                   prevPrice, 
                   status, 
                   buyRatio, 
-                  buyVol: parseFloat(item.Q), // Taker Buy Quote Volume (USDT)
-                  change: parseFloat(item.P), 
-                  volume: parseFloat(item.q), 
-                  high: parseFloat(item.h), 
-                  low: parseFloat(item.l), 
+                  buyVol,
+                  change: parseFloat(item.P) || 0, 
+                  volume: parseFloat(item.q) || 0, 
+                  high: parseFloat(item.h) || 0, 
+                  low: parseFloat(item.l) || 0, 
                   lastUpdate: Date.now() 
                 };
 
@@ -741,20 +743,20 @@ export default function App() {
                                 <div className="space-y-6">
                                     <div className="bg-white/5 p-8 rounded-[2.5rem] border border-white/5 text-center relative overflow-hidden">
                                        <div className="absolute top-0 left-0 w-full h-1 bg-white/10">
-                                          <div className="h-full bg-green-500 transition-all duration-1000" style={{ width: `${selectedCoin.buyRatio}%` }} />
+                                          <div className="h-full bg-green-500 transition-all duration-1000" style={{ width: `${selectedCoin.buyRatio || 50}%` }} />
                                        </div>
-                                       <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">ANLIK DOMİNASYON</p>
-                                       <p className={`text-5xl font-black italic tracking-tighter ${selectedCoin.buyRatio > 50 ? 'text-green-400' : 'text-red-400'}`}>
-                                          %{selectedCoin.buyRatio?.toFixed(1)} {selectedCoin.buyRatio > 50 ? 'BOĞA' : 'AYI'}
+                                       <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4">ANLIK DOMİNASYON</p>
+                                       <p className={`text-4xl md:text-5xl font-black italic tracking-tighter mb-6 ${selectedCoin.buyRatio > 50 ? 'text-green-400' : 'text-red-400'}`}>
+                                          %{selectedCoin.buyRatio?.toFixed(1) || '50.0'} {selectedCoin.buyRatio > 50 ? 'BOĞA' : 'AYI'}
                                        </p>
-                                       <div className="grid grid-cols-2 gap-4 mt-6 pt-6 border-t border-white/5 uppercase font-black text-[9px] tracking-widest">
-                                          <div>
-                                             <p className="text-gray-500 mb-1">TOPLAM ALIŞ</p>
-                                             <p className="text-green-400 text-sm italic font-mono font-bold">${(selectedCoin.buyVol / 1000000).toFixed(2)}M</p>
+                                       <div className="grid grid-cols-2 gap-8 pt-8 border-t border-white/5 uppercase font-black text-[9px] tracking-[0.2em]">
+                                          <div className="space-y-1">
+                                             <p className="text-gray-500">TOPLAM ALIŞ</p>
+                                             <p className="text-green-400 text-sm italic font-mono font-bold">${((selectedCoin.buyVol || 0) / 1000000).toFixed(2)}M</p>
                                           </div>
-                                          <div>
-                                             <p className="text-gray-500 mb-1">TOPLAM SATIŞ</p>
-                                             <p className="text-red-500 text-sm italic font-mono font-bold">${((selectedCoin.volume - selectedCoin.buyVol) / 1000000).toFixed(2)}M</p>
+                                          <div className="space-y-1">
+                                             <p className="text-gray-500">TOPLAM SATIŞ</p>
+                                             <p className="text-red-500 text-sm italic font-mono font-bold">${(((selectedCoin.volume || 0) - (selectedCoin.buyVol || 0)) / 1000000).toFixed(2)}M</p>
                                           </div>
                                        </div>
                                     </div>
