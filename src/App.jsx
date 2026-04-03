@@ -647,7 +647,9 @@ export default function App() {
         </div>
       )}
 
-      {selectedCoin && (
+      {selectedCoin && (() => {
+        const liveCoin = tickers[selectedCoin.symbol] || selectedCoin;
+        return (
         <div className="fixed inset-0 z-[150] bg-[#030712]/95 backdrop-blur-3xl flex items-center justify-center p-4 md:p-8 animate-in zoom-in-95 duration-500 overflow-y-auto">
            <button onClick={() => setSelectedCoin(null)} className="fixed top-6 right-6 w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-all border border-white/20 z-[200]">✕</button>
            
@@ -655,9 +657,9 @@ export default function App() {
               {/* Terminal Navigation */}
               <div className="p-6 border-b border-white/10 flex flex-wrap items-center justify-between gap-6 bg-white/[0.02]">
                  <div className="flex items-center gap-6">
-                    <div className="w-14 h-14 bg-cyan-500 rounded-2xl flex items-center justify-center text-white font-black text-2xl italic shadow-2xl">{selectedCoin.symbol.charAt(0)}</div>
+                    <div className="w-14 h-14 bg-cyan-500 rounded-2xl flex items-center justify-center text-white font-black text-2xl italic shadow-2xl">{liveCoin.symbol.charAt(0)}</div>
                     <div>
-                       <h2 className="text-3xl font-black italic tracking-tighter text-white uppercase">{selectedCoin.symbol.replace('USDT', '')} <span className="text-cyan-500">PRO TERMİNAL</span></h2>
+                       <h2 className="text-3xl font-black italic tracking-tighter text-white uppercase">{liveCoin.symbol.replace('USDT', '')} <span className="text-cyan-500">PRO TERMİNAL</span></h2>
                        <div className="flex items-center gap-2 mt-1">
                           <div className="w-2 h-2 bg-cyan-500 rounded-full animate-ping" />
                           <p className="text-[9px] text-gray-500 font-black tracking-widest uppercase">ZOR AI STRATEJİK ANALİZ v2.5</p>
@@ -678,9 +680,9 @@ export default function App() {
                  </nav>
 
                  <div className="text-right">
-                    <p className="text-2xl font-black text-white font-mono tracking-tighter">${selectedCoin.price?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-                    <p className={`text-[11px] font-black mt-1 ${selectedCoin.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                       {selectedCoin.change >= 0 ? '+' : ''}{selectedCoin.change}% (24S)
+                    <p className="text-2xl font-black text-white font-mono tracking-tighter">${liveCoin.price?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                    <p className={`text-[11px] font-black mt-1 ${liveCoin.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                       {liveCoin.change >= 0 ? '+' : ''}{liveCoin.change}% (24S)
                     </p>
                  </div>
               </div>
@@ -690,7 +692,7 @@ export default function App() {
                  <div className="flex-1 p-8 overflow-y-auto custom-scrollbar border-r border-white/10">
                     {modalTab === 'chart' && (
                        <div className="h-full min-h-[500px] rounded-[2rem] overflow-hidden border border-white/5 shadow-2xl animate-in zoom-in-95 duration-500">
-                          <AdvancedRealTimeChart symbol={`BINANCE:${selectedCoin.symbol}`} theme="dark" autosize locale="tr" hide_side_toolbar={false} />
+                          <AdvancedRealTimeChart symbol={`BINANCE:${liveCoin.symbol}`} theme="dark" autosize locale="tr" hide_side_toolbar={false} />
                        </div>
                     )}
 
@@ -735,7 +737,7 @@ export default function App() {
                                          },
                                          legend: { show: false }
                                       }}
-                                      series={[{ name: 'Hacim', data: [selectedCoin.buyVol || 0, (selectedCoin.volume || 0) - (selectedCoin.buyVol || 0)] }]}
+                                      series={[{ name: 'Hacim', data: [liveCoin.buyVol || 0, (liveCoin.volume || 0) - (liveCoin.buyVol || 0)] }]}
                                       type="bar"
                                       height={300}
                                    />
@@ -743,20 +745,20 @@ export default function App() {
                                 <div className="space-y-6">
                                     <div className="bg-white/5 p-8 rounded-[2.5rem] border border-white/5 text-center relative overflow-hidden">
                                        <div className="absolute top-0 left-0 w-full h-1 bg-white/10">
-                                          <div className="h-full bg-green-500 transition-all duration-1000" style={{ width: `${selectedCoin.buyRatio || 50}%` }} />
+                                          <div className="h-full bg-green-500 transition-all duration-1000" style={{ width: `${liveCoin.buyRatio || 50}%` }} />
                                        </div>
                                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4">ANLIK DOMİNASYON</p>
-                                       <p className={`text-4xl md:text-5xl font-black italic tracking-tighter mb-6 ${selectedCoin.buyRatio > 50 ? 'text-green-400' : 'text-red-400'}`}>
-                                          %{selectedCoin.buyRatio?.toFixed(1) || '50.0'} {selectedCoin.buyRatio > 50 ? 'BOĞA' : 'AYI'}
+                                       <p className={`text-4xl md:text-5xl font-black italic tracking-tighter mb-6 ${liveCoin.buyRatio > 50 ? 'text-green-400' : 'text-red-400'}`}>
+                                          %{liveCoin.buyRatio?.toFixed(1) || '50.0'} {liveCoin.buyRatio > 50 ? 'BOĞA' : 'AYI'}
                                        </p>
                                        <div className="grid grid-cols-2 gap-8 pt-8 border-t border-white/5 uppercase font-black text-[9px] tracking-[0.2em]">
                                           <div className="space-y-1">
                                              <p className="text-gray-500">TOPLAM ALIŞ</p>
-                                             <p className="text-green-400 text-sm italic font-mono font-bold">${((selectedCoin.buyVol || 0) / 1000000).toFixed(2)}M</p>
+                                             <p className="text-green-400 text-sm italic font-mono font-bold">${((liveCoin.buyVol || 0) / 1000000).toFixed(2)}M</p>
                                           </div>
                                           <div className="space-y-1">
                                              <p className="text-gray-500">TOPLAM SATIŞ</p>
-                                             <p className="text-red-500 text-sm italic font-mono font-bold">${(((selectedCoin.volume || 0) - (selectedCoin.buyVol || 0)) / 1000000).toFixed(2)}M</p>
+                                             <p className="text-red-500 text-sm italic font-mono font-bold">${(((liveCoin.volume || 0) - (liveCoin.buyVol || 0)) / 1000000).toFixed(2)}M</p>
                                           </div>
                                        </div>
                                     </div>
@@ -1018,12 +1020,13 @@ export default function App() {
                     >
                       STRATEJİK ALARMI AKTİFLEŞTİR
                     </button>
-                 </div>
+                  </div>
                </div>
              </div>
            )}
-        </div>
-      )}
+         </div>
+        );
+      })()}
 
       {/* Main Apps Header */}
       <header className="sticky top-0 z-[60] bg-[#030712]/90 backdrop-blur-3xl border-b border-white/5 p-4 flex flex-col md:flex-row items-center justify-between gap-6">
