@@ -944,10 +944,10 @@ export default function App() {
                     )}
 
                     {modalTab === 'sentiment' && (
-                       <div className="space-y-10 animate-in fade-in slide-in-from-right-8 duration-500">
+                       <div className="space-y-6 md:space-y-10 animate-in fade-in slide-in-from-right-8 duration-500">
                           {/* GRAFİTİ: AL/SAT BASKI GRAFİĞİ */}
-                          <div className="bg-white/5 border border-white/10 p-10 rounded-[3rem] glass relative overflow-hidden">
-                             <div className="absolute top-0 right-0 p-8 opacity-5">
+                          <div className="bg-white/5 border border-white/10 p-6 md:p-10 rounded-3xl md:rounded-[3rem] glass relative overflow-hidden">
+                             <div className="absolute top-0 right-0 p-4 md:p-8 opacity-5">
                                 <span className="text-8xl font-black italic text-cyan-500 uppercase">SENTIMENT</span>
                              </div>
                              <h4 className="text-[10px] font-black text-cyan-400 uppercase tracking-[0.4em] mb-10">PİYASA BASKI DAĞILIMI (TAKER VOL)</h4>
@@ -1249,16 +1249,16 @@ export default function App() {
                      )}
 
                     {modalTab === 'strateji' && aiAnalysis && (
-                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
-                           <div className="bg-white/5 border border-white/10 p-10 rounded-[3rem] glass relative overflow-hidden group">
-                              <div className="absolute top-0 right-0 p-8 opacity-5">
-                                 <span className="text-8xl font-black italic text-cyan-500 uppercase">STRATEGY</span>
+                        <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+                           <div className="bg-white/5 border border-white/10 p-6 md:p-10 rounded-3xl md:rounded-[3rem] glass relative overflow-hidden group">
+                              <div className="absolute top-0 right-0 p-4 md:p-8 opacity-5">
+                                 <span className="text-6xl md:text-8xl font-black italic text-cyan-500 uppercase">STRATEJI</span>
                               </div>
-                              <h4 className="text-[10px] font-black text-cyan-400 uppercase tracking-[0.4em] mb-10">ZOREKS PRO İŞLEM SİNYALİ</h4>
+                              <h4 className="text-[10px] font-black text-cyan-400 uppercase tracking-[0.4em] mb-8 md:mb-10">ZOREKS PRO İŞLEM SİNYALİ</h4>
                               
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
                                  {/* ENTRY ZONE */}
-                                 <div className="bg-green-500/10 border border-green-500/20 p-8 rounded-[2rem] relative group/entry">
+                                 <div className="bg-green-500/10 border border-green-500/20 p-6 md:p-8 rounded-2xl md:rounded-[2rem] relative group/entry">
                                     <div className="absolute -top-3 -left-3 bg-green-500 text-white text-[8px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest shadow-lg">GİRİŞ BÖLGESİ</div>
                                     <p className="text-[10px] text-green-400/60 font-black uppercase tracking-widest mb-3">KADEMELİ ALIM ARALIĞI</p>
                                     <h5 className="text-2xl font-black text-green-400 font-mono tracking-tighter mb-2">{aiAnalysis.entryMin} $</h5>
@@ -1270,7 +1270,7 @@ export default function App() {
                                  </div>
 
                                  {/* PROFIT TARGETS */}
-                                 <div className="md:col-span-1 bg-cyan-500/5 border border-cyan-500/20 p-8 rounded-[2rem] relative">
+                                 <div className="md:col-span-1 bg-cyan-500/5 border border-cyan-500/20 p-6 md:p-8 rounded-2xl md:rounded-[2rem] relative">
                                     <div className="absolute -top-3 -left-3 bg-cyan-500 text-white text-[8px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest shadow-lg">SATIŞ HEDEFLERİ</div>
                                     <div className="space-y-6">
                                        <div className="flex justify-between items-center bg-white/5 p-4 rounded-xl border border-white/5">
@@ -1289,7 +1289,7 @@ export default function App() {
                                  </div>
 
                                  {/* RISK MANAGEMENT */}
-                                 <div className="bg-red-500/10 border border-red-500/20 p-8 rounded-[2rem] relative">
+                                 <div className="bg-red-500/10 border border-red-500/20 p-6 md:p-8 rounded-2xl md:rounded-[2rem] relative">
                                     <div className="absolute -top-3 -left-3 bg-red-500 text-white text-[8px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest shadow-lg">ZARAR DURDUR</div>
                                     <p className="text-[10px] text-red-500/60 font-black uppercase tracking-widest mb-3">CRITICAL STOP LOSS</p>
                                     <h5 className="text-3xl font-black text-red-500 font-mono tracking-tighter mb-4">{aiAnalysis.stopLoss} $</h5>
@@ -1307,8 +1307,8 @@ export default function App() {
                               </div>
                            </div>
 
-                           <div className="bg-[#030712] border border-white/5 p-8 rounded-[2.5rem] flex items-center justify-between shadow-2xl">
-                              <div className="flex items-center gap-6">
+                           <div className="bg-[#030712] border border-white/5 p-6 md:p-8 rounded-2xl md:rounded-[2.5rem] flex items-center justify-between shadow-2xl">
+                              <div className="flex items-center gap-4 md:gap-6">
                                  <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-2xl animate-pulse">📡</div>
                                  <div>
                                     <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest">SİNYAL OLUŞTURMA ZAMANI</p>
@@ -1324,9 +1324,9 @@ export default function App() {
                      )}
 
                     {modalTab === 'orderbook' && (
-                       <div className="grid grid-cols-1 md:grid-cols-2 gap-10 h-full animate-in fade-in slide-in-from-left-8 duration-500">
-                          <div className="bg-white/5 border border-white/10 p-8 rounded-[3rem] glass flex flex-col overflow-hidden">
-                             <h4 className="text-[10px] font-black text-cyan-400 uppercase tracking-widest mb-6">EMİR DEFTERİ GÖRÜNÜMÜ</h4>
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 h-full animate-in fade-in slide-in-from-left-8 duration-500">
+                          <div className="bg-white/5 border border-white/10 p-5 md:p-8 rounded-2xl md:rounded-[3rem] glass flex flex-col overflow-hidden">
+                             <h4 className="text-[10px] font-black text-cyan-400 uppercase tracking-widest mb-4 md:mb-6">EMİR DEFTERİ GÖRÜNÜMÜ</h4>
                              <div className="flex-1 overflow-hidden font-mono text-[11px] space-y-1">
                                 {orderBook.asks.map((a, i) => (
                                    <div key={i} className="flex justify-between py-1 relative">
@@ -1346,8 +1346,8 @@ export default function App() {
                              </div>
                           </div>
 
-                          <div className="bg-white/5 border border-white/10 p-8 rounded-[3rem] glass flex flex-col overflow-hidden">
-                             <h4 className="text-[10px] font-black text-cyan-400 uppercase tracking-widest mb-6">SON İŞLEM AKIŞI</h4>
+                          <div className="bg-white/5 border border-white/10 p-5 md:p-8 rounded-2xl md:rounded-[3rem] glass flex flex-col overflow-hidden">
+                             <h4 className="text-[10px] font-black text-cyan-400 uppercase tracking-widest mb-4 md:mb-6">SON İŞLEM AKIŞI</h4>
                              <div className="flex-1 overflow-y-auto no-scrollbar space-y-3">
                                 {recentTrades.map((tr) => (
                                    <div key={tr.id} className="flex justify-between items-center bg-white/5 p-4 rounded-xl border border-white/5">
@@ -1363,9 +1363,9 @@ export default function App() {
                  </div>
 
                  {/* Sidebar: Zor AI Analysis */}
-                 <div className="w-full lg:w-[400px] p-8 bg-white/[0.02] flex flex-col">
-                    <div className="mb-10 flex justify-between items-center">
-                       <h3 className="text-xl font-black italic text-white tracking-widest">ANALİZ RAPORU</h3>
+                 <div className="w-full lg:w-[400px] p-5 md:p-8 bg-white/[0.02] flex flex-col border-t lg:border-t-0 border-white/10">
+                    <div className="mb-6 md:mb-10 flex justify-between items-center">
+                       <h3 className="text-lg md:text-xl font-black italic text-white tracking-widest">ANALİZ RAPORU</h3>
                        <div className="bg-cyan-500/20 px-3 py-1 rounded-lg border border-cyan-500/30 flex items-center gap-1.5">
                           <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-pulse" />
                           <span className="text-[8px] font-black text-cyan-400 tracking-[0.2em]">30S YENİLEME</span>
@@ -1384,7 +1384,7 @@ export default function App() {
                           </div>
                        </div>
 
-                       <div className="bg-white/5 border border-white/10 p-8 rounded-[2.5rem] glass shadow-2xl relative overflow-hidden">
+                       <div className="bg-white/5 border border-white/10 p-6 md:p-8 rounded-3xl md:rounded-[2.5rem] glass shadow-2xl relative overflow-hidden">
                           <div className="absolute top-0 right-0 p-4 opacity-10">
                              <span className="text-4xl font-black italic text-cyan-500">AI</span>
                           </div>
@@ -1407,15 +1407,25 @@ export default function App() {
                           ALARM KUR (PRO)
                        </button>
                     </div>
-                 </div>
-              </div>
-           </div>
+                  </div>
+               </div>
+
+               {/* STICKY BOTTOM ACTION BAR (BINANCE STYLE) */}
+               <div className="lg:hidden sticky bottom-0 left-0 w-full p-4 bg-[#030712]/95 backdrop-blur-2xl border-t border-white/5 flex gap-4 z-[100] pb-8">
+                  <button onClick={() => alert('Sistem Güncellemesi: Gelişmiş AL-SAT Tahtası Yakında Eklenecek.')} className="flex-1 bg-[#0ecb81] py-4 rounded-xl text-white font-black uppercase tracking-widest text-sm shadow-[0_0_20px_rgba(14,203,129,0.2)] active:scale-95 transition-transform flex items-center justify-center">
+                     AL
+                  </button>
+                  <button onClick={() => alert('Sistem Güncellemesi: Gelişmiş AL-SAT Tahtası Yakında Eklenecek.')} className="flex-1 bg-[#f6465d] py-4 rounded-xl text-white font-black uppercase tracking-widest text-sm shadow-[0_0_20px_rgba(246,70,93,0.2)] active:scale-95 transition-transform flex items-center justify-center">
+                     SAT
+                  </button>
+               </div>
+            </div>
 
            {/* PROFESSIONAL ALARM MODAL */}
            {showAlarmModal && (
-             <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-md flex items-center justify-center p-6 animate-in zoom-in-95 duration-300">
-               <div className="max-w-md w-full bg-[#030712] border border-white/10 p-10 rounded-[3rem] glass shadow-2xl relative overflow-hidden">
-                 <div className="absolute top-0 right-0 p-6">
+             <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 md:p-6 animate-in zoom-in-95 duration-300">
+               <div className="max-w-md w-full bg-[#030712] border border-white/10 p-6 md:p-10 rounded-3xl md:rounded-[3rem] glass shadow-2xl relative overflow-hidden">
+                 <div className="absolute top-0 right-0 p-4 md:p-6">
                    <button onClick={() => setShowAlarmModal(false)} className="text-gray-500 hover:text-white transition-all text-xl font-black">✕</button>
                  </div>
                  <header className="mb-8">
@@ -1478,7 +1488,7 @@ export default function App() {
                <h1 className="text-2xl md:text-4xl font-black italic tracking-tighter uppercase text-white leading-none">ZOREKS</h1>
                <div className="flex items-center gap-2 mt-1">
                   <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                  <span className="text-[8px] md:text-[9px] font-black text-gray-600 tracking-[0.3em] md:tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.15</span>
+                  <span className="text-[8px] md:text-[9px] font-black text-gray-600 tracking-[0.3em] md:tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.17</span>
                </div>
              </div>
           </div>
