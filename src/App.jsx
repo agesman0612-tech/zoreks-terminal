@@ -185,7 +185,7 @@ export default function App() {
   // AUTH & PERSISTENCE
   const sanitizeUser = (u) => {
     if (!u) return null;
-    return { ...u, balance: (typeof u.balance === 'number' && !isNaN(u.balance)) ? u.balance : 0, portfolio: Array.isArray(u.portfolio) ? u.portfolio : [], orders: Array.isArray(u.orders) ? u.orders : [] };
+    return { ...u, balance: (typeof u.balance === 'number' && !isNaN(u.balance)) ? u.balance : 0, portfolio: Array.isArray(u.portfolio) ? u.portfolio : [], orders: Array.isArray(u.orders) ? u.orders : [], tradeHistory: Array.isArray(u.tradeHistory) ? u.tradeHistory : [] };
   };
   const [user, setUser] = useState(sanitizeUser(JSON.parse(localStorage.getItem('zoreks_user'))));
   const [showLogin, setShowLogin] = useState(!localStorage.getItem('zoreks_user'));
@@ -321,13 +321,19 @@ export default function App() {
     }
 
     if (existingUser || isAdmin) {
-      const baseUser = existingUser || { username: loginForm.username };
+      const baseUser = existingUser || { username: loginForm.username, password: loginForm.password };
       const enhancedUser = sanitizeUser({ ...baseUser, role: isAdmin ? 'admin' : (baseUser.role || 'user') });
       setUser(enhancedUser); 
       localStorage.setItem('zoreks_user', JSON.stringify(enhancedUser));
+      // Upsert: if user not in accounts, add them (fixes admin users losing data)
+      if (!accounts.find(acc => acc.username === enhancedUser.username)) {
+        setAccounts(prev => [...prev, enhancedUser]);
+      } else {
+        setAccounts(prev => prev.map(acc => acc.username === enhancedUser.username ? enhancedUser : acc));
+      }
       setShowLogin(false);
     } else {
-      alert("Hatalı kullanıcı adı veya şifre. (v4.0.3)");
+      alert("Hatalı kullanıcı adı veya şifre.");
     }
   };
 
@@ -352,6 +358,14 @@ export default function App() {
   };
 
   const handleLogout = () => {
+    // Save current user state to accounts BEFORE clearing
+    if (user && user.username !== 'Misafir') {
+      const updatedAccounts = accounts.find(acc => acc.username === user.username)
+        ? accounts.map(acc => acc.username === user.username ? user : acc)
+        : [...accounts, user];
+      setAccounts(updatedAccounts);
+      localStorage.setItem('zoreks_accounts', JSON.stringify(updatedAccounts));
+    }
     setUser(null); localStorage.removeItem('zoreks_user'); setShowLogin(true);
   };
 
@@ -394,11 +408,16 @@ export default function App() {
        newPortfolio.push({ symbol, qty, avgPrice: price });
     }
 
-    const updatedUser = { ...user, balance: user.balance - amountUSD, portfolio: newPortfolio };
+    const tradeRecord = { id: Date.now(), type: 'BUY', symbol, price, amountUSD, qty, time: new Date().toLocaleString('tr-TR') };
+    const updatedUser = { ...user, balance: user.balance - amountUSD, portfolio: newPortfolio, tradeHistory: [tradeRecord, ...(user.tradeHistory || [])].slice(0, 100) };
     setUser(updatedUser);
     localStorage.setItem('zoreks_user', JSON.stringify(updatedUser));
     setAccounts(accounts.map(acc => acc.username === user.username ? updatedUser : acc));
     addToast(`✅ ${symbol} ALINDI! miktar: ${qty.toFixed(4)}`, "success");
+    // Browser notification
+    if ("Notification" in window && Notification.permission === "granted") {
+      new Notification(`✅ ZOREKS: ${symbol} ALıM`, { body: `${qty.toFixed(4)} adet $${price.toLocaleString()} fiyattan alındı.`, icon: '/favicon.ico' });
+    }
   };
 
   const handleSell = (symbol, price, qtyToSell) => {
@@ -418,11 +437,15 @@ export default function App() {
        updatedPortfolio[pIndex] = { ...item, qty: item.qty - qtyToSell };
     }
 
-    const updatedUser = { ...user, balance: user.balance + proceeds, portfolio: updatedPortfolio };
+    const tradeRecord = { id: Date.now(), type: 'SELL', symbol, price, qtyToSell, proceeds, time: new Date().toLocaleString('tr-TR') };
+    const updatedUser = { ...user, balance: user.balance + proceeds, portfolio: updatedPortfolio, tradeHistory: [tradeRecord, ...(user.tradeHistory || [])].slice(0, 100) };
     setUser(updatedUser);
     localStorage.setItem('zoreks_user', JSON.stringify(updatedUser));
     setAccounts(accounts.map(acc => acc.username === user.username ? updatedUser : acc));
     addToast(`💰 ${symbol} SATILDI! gelir: $${proceeds.toFixed(2)}`, "success");
+    if ("Notification" in window && Notification.permission === "granted") {
+      new Notification(`💰 ZOREKS: ${symbol} SATış`, { body: `${qtyToSell.toFixed(4)} adet $${price.toLocaleString()} fiyattan satıldı. Gelir: $${proceeds.toFixed(2)}`, icon: '/favicon.ico' });
+    }
   };
 
   const placeOrder = (symbol, type, price, amountUSD) => {
@@ -1551,7 +1574,7 @@ export default function App() {
                <h1 className="text-2xl md:text-4xl font-black italic tracking-tighter uppercase text-white leading-none">ZOREKS</h1>
                <div className="flex items-center gap-2 mt-1">
                   <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                  <span className="text-[8px] md:text-[9px] font-black text-gray-600 tracking-[0.3em] md:tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.25</span>
+                  <span className="text-[8px] md:text-[9px] font-black text-gray-600 tracking-[0.3em] md:tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.26</span>
                </div>
              </div>
           </div>
