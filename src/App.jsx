@@ -358,7 +358,24 @@ export default function App() {
         const data = await response.json();
         if (Array.isArray(data)) {
           const update = {};
-          data.forEach(item => { if (item?.symbol?.endsWith('USDT')) update[item.symbol] = { symbol: item.symbol, price: parseFloat(item.lastPrice), change: parseFloat(item.priceChangePercent), volume: parseFloat(item.quoteVolume), high: parseFloat(item.highPrice), low: parseFloat(item.lowPrice) }; });
+          data.forEach(item => { 
+            if (item?.symbol?.endsWith('USDT')) {
+              const totalBase = parseFloat(item.volume);
+              const takerBase = parseFloat(item.takerBuyBaseAssetVolume);
+              const buyRatio = totalBase > 0 ? (takerBase / totalBase) * 100 : 50;
+              
+              update[item.symbol] = { 
+                symbol: item.symbol, 
+                price: parseFloat(item.lastPrice), 
+                change: parseFloat(item.priceChangePercent), 
+                volume: parseFloat(item.quoteVolume), 
+                buyVol: parseFloat(item.takerBuyQuoteAssetVolume),
+                buyRatio: buyRatio,
+                high: parseFloat(item.highPrice), 
+                low: parseFloat(item.lowPrice) 
+              }; 
+            }
+          });
           setTickers(prev => ({ ...prev, ...update }));
         }
       } catch (e) {}
