@@ -1466,28 +1466,32 @@ export default function App() {
       })()}
 
       {/* Main Apps Header */}
-      <header className="sticky top-0 z-[60] bg-[#030712]/90 backdrop-blur-3xl border-b border-white/5 p-4 flex flex-col md:flex-row items-center justify-between gap-6">
-        <div className="flex items-center gap-5">
-          <div className="w-16 h-16 bg-cyan-500 rounded-[1.25rem] flex items-center justify-center shadow-[0_0_40px_rgba(6,182,212,0.5)]">
-            <span className="font-black text-white text-3xl italic tracking-tighter">ZX</span>
+      <header className="sticky top-0 z-[60] bg-[#030712]/90 backdrop-blur-3xl border-b border-white/5 p-4 md:p-6 flex flex-col lg:flex-row items-center justify-between gap-4 md:gap-6">
+        <div className="flex items-center justify-between w-full lg:w-auto gap-5">
+          <div className="flex items-center gap-4">
+             <div className="w-12 h-12 md:w-16 md:h-16 bg-cyan-500 rounded-[1rem] md:rounded-[1.25rem] flex items-center justify-center shadow-[0_0_30px_rgba(6,182,212,0.4)] md:shadow-[0_0_40px_rgba(6,182,212,0.5)]">
+               <span className="font-black text-white text-2xl md:text-3xl italic tracking-tighter">ZX</span>
+             </div>
+             <div>
+               <h1 className="text-2xl md:text-4xl font-black italic tracking-tighter uppercase text-white leading-none">ZOREKS</h1>
+               <div className="flex items-center gap-2 mt-1">
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                  <span className="text-[8px] md:text-[9px] font-black text-gray-600 tracking-[0.3em] md:tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.8</span>
+               </div>
+             </div>
           </div>
-          <div>
-            <h1 className="text-4xl font-black italic tracking-tighter uppercase text-white leading-none">ZOREKS</h1>
-            <div className="flex items-center gap-2 mt-1">
-               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-               <span className="text-[9px] font-black text-gray-600 tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.7</span>
-            </div>
-          </div>
+          
+          <button onClick={handleLogout} className="lg:hidden bg-white/5 w-10 h-10 flex items-center justify-center rounded-xl border border-white/10 hover:bg-red-500/20 text-red-500 transition-all font-black text-xs">X</button>
         </div>
 
-        <nav className="flex bg-white/5 p-1.5 rounded-[1.5rem] border border-white/10 glass shadow-2xl overflow-x-auto no-scrollbar">
+        <nav className="flex w-full lg:w-auto bg-white/5 p-1.5 rounded-2xl md:rounded-[1.5rem] border border-white/10 glass shadow-xl md:shadow-2xl overflow-x-auto no-scrollbar">
           {['all', 'altcoins', 'haberler', 'alarms', 'admin'].map((tab) => {
             if (tab === 'admin' && user?.role !== 'admin') return null;
             return (
               <button 
                 key={tab} 
                 onClick={() => setActiveTab(tab)} 
-                className={`px-4 md:px-8 py-2 md:py-3 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase transition-all tracking-tighter whitespace-nowrap flex items-center gap-2 md:gap-3 ${activeTab === tab ? 'bg-cyan-500 text-white shadow-2xl scale-105' : 'text-gray-500 hover:text-white'}`}
+                className={`px-4 md:px-8 py-2 md:py-3 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase transition-all tracking-tighter whitespace-nowrap flex items-center gap-2 md:gap-3 flex-1 justify-center ${activeTab === tab ? 'bg-cyan-500 text-white shadow-2xl scale-105' : 'text-gray-500 hover:text-white'}`}
               >
                 {tab === 'all' ? 'Tümü' : tab === 'altcoins' ? 'Altcoin Paketi' : tab === 'haberler' ? 'Dünya Gündemi' : tab === 'alarms' ? 'Alarmlarım' : 'Yönetim'}
               </button>
@@ -1495,44 +1499,23 @@ export default function App() {
           })}
         </nav>
 
-        <div className="flex items-center gap-6">
-          <div className="relative group hidden lg:block">
+        <div className="flex w-full lg:w-auto items-center justify-between lg:justify-end gap-2 md:gap-6 bg-white/5 lg:bg-transparent p-3 lg:p-0 rounded-2xl lg:rounded-none border border-white/5 lg:border-none">
+          <div className="relative group hidden xl:block">
             <input type="text" placeholder="Varlık Ara..." className="bg-white/5 border border-white/10 rounded-full px-10 py-3.5 text-sm outline-none w-72 focus:border-cyan-500/50 shadow-inner font-bold" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
-          <div className="flex items-center gap-4 border-l border-white/10 pl-6">
-            {/* PWA Install Button */}
-            <button 
-              id="install-btn"
-              onClick={() => {
-                const btn = document.getElementById('install-btn');
-                if (window.deferredPrompt) {
-                  window.deferredPrompt.prompt();
-                  window.deferredPrompt.userChoice.then((choiceResult) => {
-                    if (choiceResult.outcome === 'accepted') {
-                      console.log('User accepted the install prompt');
-                      btn.style.display = 'none';
-                    }
-                    window.deferredPrompt = null;
-                  });
-                } else {
-                  alert("Tabletinizde Chrome menüsünden (üç nokta) 'Uygulamayı Yükle' veya 'Ana Ekrana Ekle' seçeneğine dokunun.");
-                }
-              }}
-              className="hidden sm:flex bg-cyan-500/10 border border-cyan-500/20 px-6 py-2.5 rounded-xl text-cyan-400 font-black text-[10px] uppercase tracking-widest hover:bg-cyan-500 hover:text-white transition-all shadow-lg"
-            >
-              Tablete Yükle (APK)
-            </button>
-            <div className="text-right hidden sm:flex flex-col items-end gap-1 px-6 border-r border-white/5 mr-4">
-               <p className="text-[8px] font-black uppercase text-cyan-400 tracking-[0.2em] mb-0.5 leading-none">SİMÜLASYON BAKİYE</p>
-               <p className="text-xl font-mono font-black text-white italic tracking-tighter leading-none">
+          <div className="flex items-center gap-4 lg:border-l lg:border-white/10 lg:pl-6 w-full lg:w-auto justify-between">
+            {/* Search Input (Hidden on Mobile) */}
+            <div className="text-left lg:text-right flex flex-col items-start lg:items-end gap-0.5 md:gap-1 px-2 md:px-6 lg:border-r lg:border-white/5 lg:mr-4">
+               <p className="text-[7px] md:text-[8px] font-black uppercase text-cyan-400 tracking-[0.2em] mb-0.5 leading-none">SİMÜLASYON BAKİYE</p>
+               <p className="text-base md:text-xl font-mono font-black text-white italic tracking-tighter leading-none">
                   ${user?.balance?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                </p>
             </div>
-            <div className="text-right hidden sm:block">
-               <p className="text-[9px] font-black uppercase text-gray-600 tracking-widest">KİMLİK ONAYLI</p>
-               <p className="text-base font-black text-white italic tracking-tighter uppercase">{user?.username}</p>
+            <div className="text-right flex flex-col items-end">
+               <p className="text-[7px] md:text-[9px] font-black uppercase text-gray-600 tracking-widest leading-none mb-1">KİMLİK ONAYLI</p>
+               <p className="text-xs md:text-base font-black text-white italic tracking-tighter uppercase leading-none">{user?.username}</p>
             </div>
-            <button onClick={handleLogout} className="bg-white/5 w-10 h-10 flex items-center justify-center rounded-xl border border-white/10 hover:bg-red-500/20 text-red-400 transition-all font-black text-xs">X</button>
+            <button onClick={handleLogout} className="hidden lg:flex bg-white/5 w-10 h-10 items-center justify-center rounded-xl border border-white/10 hover:bg-red-500/20 text-red-400 transition-all font-black text-xs">X</button>
           </div>
         </div>
       </header>
