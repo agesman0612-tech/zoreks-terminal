@@ -1467,15 +1467,15 @@ export default function App() {
                   </div>
                </div>
 
-               {/* STICKY BOTTOM ACTION BAR (BINANCE STYLE) */}
-               <div className="lg:hidden sticky bottom-0 left-0 w-full p-4 bg-[#030712]/95 backdrop-blur-2xl border-t border-white/5 flex gap-4 z-[100] pb-8">
-                  <button onClick={() => { setModalTab('trade'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="flex-1 bg-[#0ecb81] py-3 rounded-xl text-white transition-transform flex flex-col items-center justify-center gap-0.5 shadow-[0_0_20px_rgba(14,203,129,0.2)] active:scale-95">
-                     <span className="font-black uppercase tracking-widest text-sm leading-none">AL</span>
-                     <span className="text-[10px] font-black font-mono opacity-80 leading-none">${liveCoin.price?.toLocaleString(undefined, { minimumFractionDigits: liveCoin.price < 1 ? 4 : 2 })}</span>
+               {/* STICKY BOTTOM ACTION BAR (ALL SCREENS) */}
+               <div className="sticky bottom-0 left-0 w-full p-4 lg:px-8 bg-[#030712]/95 backdrop-blur-2xl border-t border-white/5 flex gap-4 z-[100] pb-8 lg:pb-4">
+                  <button onClick={() => { setModalTab('trade'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="flex-1 bg-[#0ecb81] py-3 lg:py-4 rounded-xl lg:rounded-2xl text-white transition-transform flex flex-col items-center justify-center gap-0.5 shadow-[0_0_20px_rgba(14,203,129,0.2)] active:scale-95 hover:shadow-[0_0_40px_rgba(14,203,129,0.3)] hover:scale-[1.02]">
+                     <span className="font-black uppercase tracking-widest text-sm lg:text-base leading-none">AL</span>
+                     <span className="text-[10px] lg:text-xs font-black font-mono opacity-80 leading-none">${liveCoin.price?.toLocaleString(undefined, { minimumFractionDigits: liveCoin.price < 1 ? 4 : 2 })}</span>
                   </button>
-                  <button onClick={() => { setModalTab('trade'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="flex-1 bg-[#f6465d] py-3 rounded-xl text-white transition-transform flex flex-col items-center justify-center gap-0.5 shadow-[0_0_20px_rgba(246,70,93,0.2)] active:scale-95">
-                     <span className="font-black uppercase tracking-widest text-sm leading-none">SAT</span>
-                     <span className="text-[10px] font-black font-mono opacity-80 leading-none">${liveCoin.price?.toLocaleString(undefined, { minimumFractionDigits: liveCoin.price < 1 ? 4 : 2 })}</span>
+                  <button onClick={() => { setModalTab('trade'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="flex-1 bg-[#f6465d] py-3 lg:py-4 rounded-xl lg:rounded-2xl text-white transition-transform flex flex-col items-center justify-center gap-0.5 shadow-[0_0_20px_rgba(246,70,93,0.2)] active:scale-95 hover:shadow-[0_0_40px_rgba(246,70,93,0.3)] hover:scale-[1.02]">
+                     <span className="font-black uppercase tracking-widest text-sm lg:text-base leading-none">SAT</span>
+                     <span className="text-[10px] lg:text-xs font-black font-mono opacity-80 leading-none">${liveCoin.price?.toLocaleString(undefined, { minimumFractionDigits: liveCoin.price < 1 ? 4 : 2 })}</span>
                   </button>
                </div>
             </div>
@@ -1547,12 +1547,12 @@ export default function App() {
                <h1 className="text-2xl md:text-4xl font-black italic tracking-tighter uppercase text-white leading-none">ZOREKS</h1>
                <div className="flex items-center gap-2 mt-1">
                   <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                  <span className="text-[8px] md:text-[9px] font-black text-gray-600 tracking-[0.3em] md:tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.23</span>
+                  <span className="text-[8px] md:text-[9px] font-black text-gray-600 tracking-[0.3em] md:tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.24</span>
                </div>
              </div>
           </div>
           
-          <button onClick={handleLogout} className="lg:hidden bg-white/5 w-10 h-10 flex items-center justify-center rounded-xl border border-white/10 hover:bg-red-500/20 text-red-500 transition-all font-black text-xs">X</button>
+          <button onClick={handleLogout} className="bg-white/5 w-10 h-10 flex items-center justify-center rounded-xl border border-white/10 hover:bg-red-500/20 text-red-500 transition-all font-black text-xs">X</button>
         </div>
 
         <nav className="flex w-full lg:w-auto bg-white/5 p-1.5 rounded-2xl md:rounded-[1.5rem] border border-white/10 glass shadow-xl md:shadow-2xl overflow-x-auto no-scrollbar">
