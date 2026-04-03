@@ -1460,7 +1460,7 @@ export default function App() {
             <h1 className="text-4xl font-black italic tracking-tighter uppercase text-white leading-none">ZOREKS</h1>
             <div className="flex items-center gap-2 mt-1">
                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-               <span className="text-[9px] font-black text-gray-600 tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.4</span>
+               <span className="text-[9px] font-black text-gray-600 tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.5</span>
             </div>
           </div>
         </div>
@@ -1507,11 +1507,17 @@ export default function App() {
             >
               Tablete Yükle (APK)
             </button>
+            <div className="text-right hidden sm:flex flex-col items-end gap-1 px-6 border-r border-white/5 mr-4">
+               <p className="text-[8px] font-black uppercase text-cyan-400 tracking-[0.2em] mb-0.5 leading-none">SİMÜLASYON BAKİYE</p>
+               <p className="text-xl font-mono font-black text-white italic tracking-tighter leading-none">
+                  ${user?.balance?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+               </p>
+            </div>
             <div className="text-right hidden sm:block">
                <p className="text-[9px] font-black uppercase text-gray-600 tracking-widest">KİMLİK ONAYLI</p>
-               <p className="text-base font-black text-white italic tracking-tighter">{user?.username}</p>
+               <p className="text-base font-black text-white italic tracking-tighter uppercase">{user?.username}</p>
             </div>
-            <button onClick={handleLogout} className="bg-white/5 w-12 h-12 flex items-center justify-center rounded-2xl border border-white/10 hover:bg-red-500/20 text-red-400 transition-all font-black">X</button>
+            <button onClick={handleLogout} className="bg-white/5 w-10 h-10 flex items-center justify-center rounded-xl border border-white/10 hover:bg-red-500/20 text-red-400 transition-all font-black text-xs">X</button>
           </div>
         </div>
       </header>
