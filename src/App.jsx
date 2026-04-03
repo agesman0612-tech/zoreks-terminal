@@ -8,39 +8,60 @@ const BINANCE_REST_URL = 'https://api.binance.com/api/v3/ticker/24hr';
 // Zor AI - Ultra Stratejik Analiz Motoru (Profesyonel Raporlama)
 const generateDetailedAIAnalysis = (coin) => {
   const { change, volume, price, high, low } = coin;
+  
+  // Realism Improvement: Volatility & Range Analysis
+  const range = high - low;
+  const volatility = range > 0 ? (range / price) * 100 : 2.5;
+  const positionInRange = range > 0 ? ((price - low) / range) * 100 : 50;
+  
   let signal = "NÖTR / BEKLE";
-  let rsiMock = 50 + (change * 2.8); if (rsiMock > 98) rsiMock = 99; if (rsiMock < 2) rsiMock = 1;
   let trend = "AKÜMÜLASYON";
   let color = "text-gray-400";
   let bg = "bg-gray-500/10";
+  let confidence = 50 + (Math.abs(change) * 2);
   
-  const sup = (price * 0.985).toFixed(price > 1 ? 2 : 6);
-  const res = (price * 1.025).toFixed(price > 1 ? 2 : 6);
+  // RSI Mock based on price position in 24h range + change
+  let rsiMock = positionInRange * 0.8 + (change * 1.5) + 10;
+  if (rsiMock > 95) rsiMock = 95; if (rsiMock < 5) rsiMock = 5;
 
-  if (change > 7) { 
-    signal = "AGRESİF AL / LONG"; trend = "PARABOLİK YÜKSELİŞ"; color = "text-green-400"; bg = "bg-green-500/20"; 
-  } else if (change > 2.5) { 
-    signal = "STRATEJİK AL"; trend = "POZİTİF MOMENTUM"; color = "text-green-300"; bg = "bg-green-400/10"; 
-  } else if (change < -7) { 
-    signal = "ACİL SAT / SHORT"; trend = "PANİK SATIŞI"; color = "text-red-500"; bg = "bg-red-600/20"; 
-  } else if (change < -2.5) { 
-    signal = "STRATEJİK SAT"; trend = "NEGATİF BASKI"; color = "text-red-400"; bg = "bg-red-500/10"; 
+  if (change > 5 || (positionInRange > 80 && change > 0)) { 
+    signal = "GÜÇLÜ AL / LONG"; trend = "POZİTİF TREND"; color = "text-green-400"; bg = "bg-green-500/20"; 
+  } else if (change > 1.5) { 
+    signal = "STRATEJİK EKLEME"; trend = "YUKARI EĞİLİM"; color = "text-green-300"; bg = "bg-green-400/10"; 
+  } else if (change < -5 || (positionInRange < 20 && change < 0)) { 
+    signal = "GÜÇLÜ SAT / SHORT"; trend = "NEGATİF TREND"; color = "text-red-500"; bg = "bg-red-600/20"; 
+  } else if (change < -1.5) { 
+    signal = "STRATEJİK AZALT"; trend = "AŞAĞI EĞİLİM"; color = "text-red-400"; bg = "bg-red-500/10"; 
   }
 
   const isBullish = change >= 0;
   
-  // Dynamic Targets based on Volatility/Change
-  const entryMin = (price * (isBullish ? 0.99 : 1.01)).toFixed(price > 1 ? 2 : 6);
-  const entryMax = (price * (isBullish ? 1.002 : 1.02)).toFixed(price > 1 ? 2 : 6);
-  const tp1 = (price * (isBullish ? 1.025 : 0.975)).toFixed(price > 1 ? 2 : 6);
-  const tp2 = (price * (isBullish ? 1.05 : 0.95)).toFixed(price > 1 ? 2 : 6);
-  const tp3 = (price * (isBullish ? 1.10 : 0.90)).toFixed(price > 1 ? 2 : 6);
-  const stopLoss = (price * (isBullish ? 0.965 : 1.035)).toFixed(price > 1 ? 2 : 6);
+  // Realistic Targets based on Volatility (ATR-like approach)
+  const entryMin = (price * (isBullish ? 0.995 : 1.005)).toFixed(price > 1 ? 2 : 6);
+  const entryMax = (price * (isBullish ? 1.002 : 1.002)).toFixed(price > 1 ? 2 : 6);
+  
+  const targetMultiplier = Math.max(volatility * 0.5, 1.5);
+  const tp1 = (price * (isBullish ? (1 + (targetMultiplier * 0.01)) : (1 - (targetMultiplier * 0.01)))).toFixed(price > 1 ? 2 : 6);
+  const tp2 = (price * (isBullish ? (1 + (targetMultiplier * 0.025)) : (1 - (targetMultiplier * 0.025)))).toFixed(price > 1 ? 2 : 6);
+  const tp3 = (price * (isBullish ? (1 + (targetMultiplier * 0.05)) : (1 - (targetMultiplier * 0.05)))).toFixed(price > 1 ? 2 : 6);
+  
+  const stopLoss = (price * (isBullish ? (1 - (targetMultiplier * 0.6 * 0.01)) : (1 + (targetMultiplier * 0.6 * 0.01)))).toFixed(price > 1 ? 2 : 6);
+  
+  // Risk Reward Calculation
+  const risk = Math.abs(parseFloat(stopLoss) - price);
+  const reward = Math.abs(parseFloat(tp2) - price);
+  const rrRatio = (reward / risk).toFixed(2);
 
-  const commentary = `ZOREKS Zor AI STRATEJİ RAPORU: Mevcut parite analizinde ${trend} yapısı belirginleşmiş durumda. Fiyatın ${price.toLocaleString()} $ seviyesindeki seyri, teknik indikatörlerde (RSI: ${rsiMock.toFixed(0)}) ${change > 0 ? "aşırı alım bölgesine yakınsama" : "aşırı satış doygunluğu"} sinyali veriyor. Alım/Satım stratejisi için ${isBullish ? "Entry (Giriş)" : "Short (Satış)"} bölgesi ${entryMin} - ${entryMax} $ aralığında rasyonel görünüyor. Hedeflenen kâr al (TP) seviyeleri sırasıyla ${tp1}, ${tp2} ve ${tp3} $ olarak belirlenmiştir. ${stopLoss} $ seviyesi altındaki kapanışlarda pozisyon koruması (Stop Loss) aktif edilmelidir.`;
+  const templates = [
+    `ZOREKS Pro Analiz: ${trend} yapısı dahilinde fiyatın ${price.toLocaleString()}$ seviyesindeki likidite temizliği tamamlandı. ${volatility.toFixed(1)}% volatilite ile ${isBullish ? "yukarı yönlü bir kırılım" : "aşağı yönlü bir baskı"} bekleniyor.`,
+    `Strateji Raporu: ${trend} sinyalleri güçleniyor. RSI ${rsiMock.toFixed(0)} seviyesinde ve ${rsiMock > 70 ? "aşırı alım" : rsiMock < 30 ? "aşırı satış" : "denge"} bölgesinde. ${rrRatio} R/R oranıyla pozisyon değerlendirilebilir.`,
+    `Teknik Görünüm: ${price}$ ana pivot seviyesi üzerinde ${trend} korunuyor. Hacim verileri ${isBullish ? "alış iştahının" : "satış baskısının"} arttığını gösteriyor. Hedefler aktif.`
+  ];
+  
+  const commentary = templates[Math.floor(Date.now() / 1000) % templates.length];
 
-  return { signal, trend, rsiMock, color, bg, entryMin, entryMax, tp1, tp2, tp3, stopLoss, isBullish,
-    indicators: `RSI-14: ${rsiMock.toFixed(0)} | VOL: ${(volume/1000000).toFixed(2)}M | ATR-24: %${Math.abs(change).toFixed(2)}`,
+  return { signal, trend, rsiMock, color, bg, entryMin, entryMax, tp1, tp2, tp3, stopLoss, isBullish, confidence: confidence.toFixed(1), rrRatio,
+    indicators: `RSI: ${rsiMock.toFixed(0)} | VOLATİLİTE: %${volatility.toFixed(2)} | GÜVEN: %${confidence.toFixed(1)}`,
     comment: commentary
   };
 };
@@ -418,7 +439,19 @@ export default function App() {
                 const takerBuyBaseVol = parseFloat(item.V);
                 const buyRatio = totalBaseVol > 0 ? (takerBuyBaseVol / totalBaseVol) * 100 : 50;
 
-                update[item.s] = { symbol: item.s, price, prevPrice, status, buyRatio, change: parseFloat(item.P), volume: parseFloat(item.q), high: parseFloat(item.h), low: parseFloat(item.l), lastUpdate: Date.now() };
+                update[item.s] = { 
+                  symbol: item.s, 
+                  price, 
+                  prevPrice, 
+                  status, 
+                  buyRatio, 
+                  buyVol: parseFloat(item.Q), // Taker Buy Quote Volume (USDT)
+                  change: parseFloat(item.P), 
+                  volume: parseFloat(item.q), 
+                  high: parseFloat(item.h), 
+                  low: parseFloat(item.l), 
+                  lastUpdate: Date.now() 
+                };
 
                 // WHALE TRACKER: Monitor for large trades (> 100k USD in volume spike)
                 const volChange = update[item.s].volume - (tickers[item.s]?.volume || 0);
@@ -669,12 +702,25 @@ export default function App() {
                                    />
                                 </div>
                                 <div className="space-y-6">
-                                   <div className="bg-white/5 p-8 rounded-[2.5rem] border border-white/5 text-center">
-                                      <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">ANLIK DOMİNASYON</p>
-                                      <p className={`text-5xl font-black italic tracking-tighter ${selectedCoin.buyRatio > 50 ? 'text-green-400' : 'text-red-400'}`}>
-                                         %{selectedCoin.buyRatio?.toFixed(1)} {selectedCoin.buyRatio > 50 ? 'BOĞA' : 'AYI'}
-                                      </p>
-                                   </div>
+                                    <div className="bg-white/5 p-8 rounded-[2.5rem] border border-white/5 text-center relative overflow-hidden">
+                                       <div className="absolute top-0 left-0 w-full h-1 bg-white/10">
+                                          <div className="h-full bg-green-500 transition-all duration-1000" style={{ width: `${selectedCoin.buyRatio}%` }} />
+                                       </div>
+                                       <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">ANLIK DOMİNASYON</p>
+                                       <p className={`text-5xl font-black italic tracking-tighter ${selectedCoin.buyRatio > 50 ? 'text-green-400' : 'text-red-400'}`}>
+                                          %{selectedCoin.buyRatio?.toFixed(1)} {selectedCoin.buyRatio > 50 ? 'BOĞA' : 'AYI'}
+                                       </p>
+                                       <div className="grid grid-cols-2 gap-4 mt-6 pt-6 border-t border-white/5 uppercase font-black text-[9px] tracking-widest">
+                                          <div>
+                                             <p className="text-gray-500 mb-1">TOPLAM ALIŞ</p>
+                                             <p className="text-green-400 text-sm italic font-mono font-bold">${(selectedCoin.buyVol / 1000000).toFixed(2)}M</p>
+                                          </div>
+                                          <div>
+                                             <p className="text-gray-500 mb-1">TOPLAM SATIŞ</p>
+                                             <p className="text-red-500 text-sm italic font-mono font-bold">${((selectedCoin.volume - selectedCoin.buyVol) / 1000000).toFixed(2)}M</p>
+                                          </div>
+                                       </div>
+                                    </div>
                                    <div className="bg-cyan-500/5 p-6 rounded-2xl border border-cyan-500/20 text-center">
                                       <p className="text-[10px] font-black text-cyan-400 uppercase tracking-widest mb-2">FONLAMA (8S)</p>
                                       <p className={`text-xl font-mono font-black ${fundingRate > 0 ? 'text-red-400' : 'text-green-400'}`}>{fundingRate ? `${fundingRate.toFixed(4)}%` : '---'}</p>
@@ -769,9 +815,12 @@ export default function App() {
                                     <h5 className="text-3xl font-black text-red-500 font-mono tracking-tighter mb-4">{aiAnalysis.stopLoss} $</h5>
                                     <p className="text-[9px] font-bold text-red-400 italic">"Bu fiyatın altındaki saatlik kapanışlarda strateji iptal edilmelidir."</p>
                                     <div className="mt-8">
-                                       <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-2">RİSK / ÖDÜL ORANI</p>
-                                       <div className="h-2 w-full bg-red-500/10 rounded-full overflow-hidden">
-                                          <div className="h-full bg-cyan-500 w-[70%]" />
+                                       <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-2">RİSK / ÖDÜL ORANI (R:R)</p>
+                                       <div className="flex items-center gap-4">
+                                          <div className="h-2 flex-1 bg-red-500/10 rounded-full overflow-hidden">
+                                             <div className="h-full bg-cyan-500" style={{ width: `${Math.min((parseFloat(aiAnalysis.rrRatio) / 3) * 100, 100)}%` }} />
+                                          </div>
+                                          <span className="text-xs font-black text-white font-mono">1 : {aiAnalysis.rrRatio}</span>
                                        </div>
                                     </div>
                                  </div>
@@ -788,7 +837,7 @@ export default function App() {
                               </div>
                               <div className="text-right">
                                  <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest">GÜVEN SKORU</p>
-                                 <p className="text-xl font-black text-cyan-500 italic tracking-widest">%92.4</p>
+                                 <p className="text-xl font-black text-cyan-500 italic tracking-widest">%{aiAnalysis.confidence}</p>
                               </div>
                            </div>
                         </div>
