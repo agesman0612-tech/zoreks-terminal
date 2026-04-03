@@ -183,7 +183,11 @@ export default function App() {
   }, []);
 
   // AUTH & PERSISTENCE
-  const [user, setUser] = useState(JSON.parse(localStorage.getItem('zoreks_user')) || null);
+  const sanitizeUser = (u) => {
+    if (!u) return null;
+    return { ...u, balance: (typeof u.balance === 'number' && !isNaN(u.balance)) ? u.balance : 0, portfolio: Array.isArray(u.portfolio) ? u.portfolio : [], orders: Array.isArray(u.orders) ? u.orders : [] };
+  };
+  const [user, setUser] = useState(sanitizeUser(JSON.parse(localStorage.getItem('zoreks_user'))));
   const [showLogin, setShowLogin] = useState(!localStorage.getItem('zoreks_user'));
   const [isRegistering, setIsRegistering] = useState(false);
   const [loginForm, setLoginForm] = useState({ username: '', email: '', password: '' });
@@ -317,8 +321,8 @@ export default function App() {
     }
 
     if (existingUser || isAdmin) {
-      const baseUser = existingUser || { username: loginForm.username, role: 'admin' };
-      const enhancedUser = { ...baseUser, balance: baseUser.balance || 0, portfolio: baseUser.portfolio || [], orders: baseUser.orders || [] };
+      const baseUser = existingUser || { username: loginForm.username };
+      const enhancedUser = sanitizeUser({ ...baseUser, role: isAdmin ? 'admin' : (baseUser.role || 'user') });
       setUser(enhancedUser); 
       localStorage.setItem('zoreks_user', JSON.stringify(enhancedUser));
       setShowLogin(false);
@@ -333,7 +337,7 @@ export default function App() {
       alert("Bu kullanıcı adı zaten alınmış.");
       return;
     }
-    const newUser = { username: loginForm.username, email: loginForm.email, password: loginForm.password, role: 'user' };
+    const newUser = sanitizeUser({ username: loginForm.username, email: loginForm.email, password: loginForm.password, role: 'user' });
     const updatedAccounts = [...accounts, newUser];
     setAccounts(updatedAccounts);
     setUser(newUser);
@@ -1547,7 +1551,7 @@ export default function App() {
                <h1 className="text-2xl md:text-4xl font-black italic tracking-tighter uppercase text-white leading-none">ZOREKS</h1>
                <div className="flex items-center gap-2 mt-1">
                   <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                  <span className="text-[8px] md:text-[9px] font-black text-gray-600 tracking-[0.3em] md:tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.24</span>
+                  <span className="text-[8px] md:text-[9px] font-black text-gray-600 tracking-[0.3em] md:tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.25</span>
                </div>
              </div>
           </div>
