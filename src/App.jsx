@@ -1079,52 +1079,49 @@ export default function App() {
                     )}
 
                      {modalTab === 'trade' && (
-                        <div className="space-y-10 animate-in fade-in slide-in-from-right-8 duration-500 max-w-4xl mx-auto">
-                           <div className="bg-white/5 border border-white/10 p-12 rounded-[3.5rem] glass relative overflow-hidden">
-                              <div className="absolute top-0 right-0 p-10 opacity-5">
-                                 <span className="text-8xl font-black italic text-cyan-500 uppercase">TRADE</span>
-                              </div>
-                              <h4 className="text-[10px] font-black text-cyan-400 uppercase tracking-[0.4em] mb-12">SİMÜLASYON İŞLEM PANELİ (SPOT)</h4>
-                              
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-                                 <div className="space-y-8">
-                                    <div className="flex bg-white/5 p-1.5 rounded-2xl border border-white/10 mb-6">
+                         <div className="animate-in fade-in slide-in-from-right-8 duration-500 max-w-4xl mx-auto">
+                            <div className="bg-white/5 border border-white/10 p-5 md:p-8 rounded-3xl md:rounded-[3rem] glass relative overflow-hidden">
+                               <h4 className="text-[9px] font-black text-cyan-400 uppercase tracking-[0.4em] mb-6">SİMÜLASYON İŞLEM PANELİ (SPOT)</h4>
+                               
+                               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-12 items-start">
+                                 <div className="space-y-5">
+                                    <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10 mb-4">
                                        {['MARKET', 'LIMIT'].map(t => (
                                           <button 
                                              key={t}
                                              onClick={() => setOrderType(t)}
-                                             className={`flex-1 py-3 rounded-xl text-[10px] font-black tracking-widest transition-all ${orderType === t ? 'bg-cyan-500 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
+                                             className={`flex-1 py-2.5 rounded-xl text-[9px] font-black tracking-widest transition-all ${orderType === t ? 'bg-cyan-500 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
                                           >
-                                             {t === 'MARKET' ? 'PİYASA (ANLIK)' : 'LİMİT (EMİR)'}
+                                             {t === 'MARKET' ? 'PİYASA' : 'LİMİT'}
                                           </button>
                                        ))}
                                     </div>
 
-                                    <div className="bg-black/20 p-8 rounded-[2rem] border border-white/5">
-                                       <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">KULLANILABİLİR BAKİYE</p>
-                                       <p className="text-3xl font-black text-white font-mono">${user?.balance?.toLocaleString(undefined, { minimumFractionDigits: 2 })} <span className="text-cyan-500 text-sm">USD</span></p>
+                                    <div className="bg-black/20 p-4 rounded-2xl border border-white/5">
+                                       <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">KULLANILABİLİR BAKİYE</p>
+                                       <p className="text-2xl font-black text-white font-mono">${user?.balance?.toLocaleString(undefined, { minimumFractionDigits: 2 })} <span className="text-cyan-500 text-sm">USD</span></p>
                                     </div>
 
-                                    <div className="space-y-6">
+                                    <div className="space-y-3">
                                        {orderType === 'LIMIT' && (
-                                          <div className="space-y-4 animate-in slide-in-from-top-4 duration-300">
-                                             <label className="text-[10px] font-black text-cyan-400 uppercase tracking-widest block ml-2">EMİR FİYATI (USD)</label>
+                                          <div className="space-y-2 animate-in slide-in-from-top-4 duration-300">
+                                             <label className="text-[9px] font-black text-cyan-400 uppercase tracking-widest block ml-1">EMİR FİYATI (USD)</label>
                                              <input 
                                                 type="number" 
                                                 placeholder="Hedef Fiyat..."
-                                                className="w-full bg-white/5 border border-cyan-500/30 rounded-2xl px-8 py-5 outline-none focus:border-cyan-500 text-white font-black text-xl"
+                                                className="w-full bg-white/5 border border-cyan-500/30 rounded-xl px-5 py-4 outline-none focus:border-cyan-500 text-white font-black text-base transition-all"
                                                 value={limitPrice}
                                                 onChange={(e) => setLimitPrice(e.target.value)}
                                              />
                                           </div>
                                        )}
                                        
-                                       <div className="space-y-4">
-                                          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block ml-2">İŞLEM MİKTARI (USD)</label>
+                                       <div className="space-y-2">
+                                          <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block ml-1">İŞLEM MİKTARI (USD)</label>
                                           <input 
                                              type="number" 
                                              placeholder="Miktar Girin..."
-                                             className="w-full bg-white/5 border border-white/10 rounded-2xl px-8 py-5 outline-none focus:border-cyan-500/50 text-white font-black text-xl transition-all"
+                                             className="w-full bg-white/5 border border-white/10 rounded-xl px-5 py-4 outline-none focus:border-cyan-500/50 text-white font-black text-base transition-all"
                                              value={tradeAmount}
                                              onChange={(e) => setTradeAmount(e.target.value)}
                                           />
@@ -1133,7 +1130,7 @@ export default function App() {
                                                 <button 
                                                    key={p}
                                                    onClick={() => setTradeAmount(((user?.balance || 0) * p / 100).toFixed(2))}
-                                                   className="bg-white/5 py-2 rounded-lg text-[10px] font-black text-gray-500 hover:bg-cyan-500/20 hover:text-cyan-400 transition-all uppercase"
+                                                   className="bg-white/5 py-1.5 rounded-lg text-[9px] font-black text-gray-500 hover:bg-cyan-500/20 hover:text-cyan-400 transition-all uppercase"
                                                 >
                                                    %{p}
                                                 </button>
@@ -1142,15 +1139,16 @@ export default function App() {
                                        </div>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-6 pt-4">
+                                    <div className="grid grid-cols-2 gap-4 pt-2">
                                        <button 
                                           onClick={() => {
                                              if (orderType === 'MARKET') handleBuy(liveCoin.symbol, liveCoin.price, parseFloat(tradeAmount));
                                              else placeOrder(liveCoin.symbol, 'LIMIT_BUY', parseFloat(limitPrice), parseFloat(tradeAmount));
                                           }}
-                                          className="bg-green-500 py-6 rounded-[1.5rem] text-white font-black text-lg shadow-xl shadow-green-500/20 hover:scale-105 active:scale-95 transition-all uppercase tracking-widest"
+                                          className="bg-[#0ecb81] py-4 rounded-2xl text-white font-black shadow-lg shadow-green-500/20 hover:scale-105 active:scale-95 transition-all flex flex-col items-center justify-center gap-0.5"
                                        >
-                                          {orderType === 'MARKET' ? 'PİYASA AL' : 'ALIM EMRİ VER'}
+                                          <span className="text-sm uppercase tracking-widest leading-none">{orderType === 'MARKET' ? 'PİYASA AL' : 'ALIM EMRİ'}</span>
+                                          <span className="text-[10px] font-black font-mono opacity-80 leading-none">${liveCoin.price?.toLocaleString(undefined, {minimumFractionDigits: liveCoin.price < 1 ? 4 : 2})}</span>
                                        </button>
                                        <button 
                                           onClick={() => {
@@ -1161,15 +1159,16 @@ export default function App() {
                                                 placeOrder(liveCoin.symbol, 'LIMIT_SELL', parseFloat(limitPrice), parseFloat(tradeAmount));
                                              }
                                           }}
-                                          className="bg-red-500 py-6 rounded-[1.5rem] text-white font-black text-lg shadow-xl shadow-red-500/20 hover:scale-105 active:scale-95 transition-all uppercase tracking-widest"
+                                          className="bg-[#f6465d] py-4 rounded-2xl text-white font-black shadow-lg shadow-red-500/20 hover:scale-105 active:scale-95 transition-all flex flex-col items-center justify-center gap-0.5"
                                        >
-                                          {orderType === 'MARKET' ? 'PİYASA SAT' : 'SATIŞ EMRİ VER'}
+                                          <span className="text-sm uppercase tracking-widest leading-none">{orderType === 'MARKET' ? 'PİYASA SAT' : 'SATIŞ EMRİ'}</span>
+                                          <span className="text-[10px] font-black font-mono opacity-80 leading-none">${liveCoin.price?.toLocaleString(undefined, {minimumFractionDigits: liveCoin.price < 1 ? 4 : 2})}</span>
                                        </button>
                                     </div>
                                  </div>
 
-                                 <div className="bg-white/2 p-8 rounded-[3rem] border border-white/5 space-y-8">
-                                    <h5 className="text-[11px] font-black text-white italic tracking-widest uppercase border-b border-white/5 pb-4">VARLIK DURUMU</h5>
+                                 <div className="bg-white/5 p-5 md:p-8 rounded-2xl md:rounded-[3rem] border border-white/5 space-y-5">
+                                    <h5 className="text-[10px] font-black text-white italic tracking-widest uppercase border-b border-white/5 pb-3">VARLIK DURUMU</h5>
                                     {user?.portfolio?.find(p => p.symbol === liveCoin.symbol) ? (
                                        <div className="space-y-6">
                                           <div className="flex justify-between items-end">
@@ -1490,7 +1489,7 @@ export default function App() {
                <h1 className="text-2xl md:text-4xl font-black italic tracking-tighter uppercase text-white leading-none">ZOREKS</h1>
                <div className="flex items-center gap-2 mt-1">
                   <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                  <span className="text-[8px] md:text-[9px] font-black text-gray-600 tracking-[0.3em] md:tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.18</span>
+                  <span className="text-[8px] md:text-[9px] font-black text-gray-600 tracking-[0.3em] md:tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.19</span>
                </div>
              </div>
           </div>
