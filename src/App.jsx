@@ -60,9 +60,19 @@ export default function App() {
   const [recentTrades, setRecentTrades] = useState([]);
   const [fundingRate, setFundingRate] = useState(null);
   const [longShortData, setLongShortData] = useState(null);
-  const [aiAnalysis, setAiAnalysis] = useState(null);
   const [modalTab, setModalTab] = useState('chart');
+  const [showAlarmModal, setShowAlarmModal] = useState(false);
+  const [alarmForm, setAlarmForm] = useState({ target: '', type: 'ABOVE' });
+  const [commentInput, setCommentInput] = useState('');
+  const [commentSentiment, setCommentSentiment] = useState('Bullish');
   const detailWs = useRef(null);
+
+  // NOTIFICATION PERMISSION
+  useEffect(() => {
+    if ("Notification" in window) {
+      Notification.requestPermission();
+    }
+  }, []);
 
   // AUTH & PERSISTENCE
   const [user, setUser] = useState(JSON.parse(localStorage.getItem('zoreks_user')) || null);
@@ -326,7 +336,21 @@ export default function App() {
 
                 update[item.s] = { symbol: item.s, price, prevPrice, status, buyRatio, change: parseFloat(item.P), volume: parseFloat(item.q), high: parseFloat(item.h), low: parseFloat(item.l), lastUpdate: Date.now() };
 
-                alerts.forEach(alertItem => { if (alertItem.symbol === item.s && alertItem.active && ((alertItem.type === 'ABOVE' && price > alertItem.target) || (alertItem.type === 'BELOW' && price < alertItem.target))) { alertItem.active = false; playPing(); alert(`🚨 ZOREKS ALARM: ${alertItem.symbol} Hedef Fiyata (${alertItem.target}) Ulaştı!`); } });
+                alerts.forEach(alertItem => { 
+                  if (alertItem.symbol === item.s && alertItem.active && ((alertItem.type === 'ABOVE' && price > alertItem.target) || (alertItem.type === 'BELOW' && price < alertItem.target))) { 
+                    alertItem.active = false; 
+                    playPing(); 
+                    
+                    // SYSTEM NOTIFICATION
+                    if ("Notification" in window && Notification.permission === "granted") {
+                      new Notification(`🚨 ZOREKS ALARM: ${alertItem.symbol}`, {
+                        body: `${alertItem.target} USD hedefine ulaşıldı! Canlı fiyat: ${price}`,
+                        icon: '/favicon.ico'
+                      });
+                    }
+                    alert(`🚨 ZOREKS ALARM: ${alertItem.symbol} Hedef Fiyata (${alertItem.target}) Ulaştı!`); 
+                  } 
+                });
               }
             });
             setTickers(prev => ({ ...prev, ...update }));
@@ -348,6 +372,27 @@ export default function App() {
       window.removeEventListener('keydown', handleEsc);
     };
   }, [alerts]);
+
+  const addComment = (e) => {
+    if (e) e.preventDefault();
+    if (!user || user.role === 'guest') {
+      alert("Yorum yapmak için giriş yapmalısınız.");
+      return;
+    }
+    if (!commentInput.trim()) return;
+
+    const newComment = {
+      id: Date.now(),
+      user: user.username,
+      text: commentInput,
+      time: "Şimdi",
+      sentiment: commentSentiment,
+    };
+    const updated = [newComment, ...comments];
+    setComments(updated);
+    localStorage.setItem('zoreks_comments', JSON.stringify(updated));
+    setCommentInput('');
+  };
 
   const list = useMemo(() => {
     let result = Object.values(tickers);
@@ -663,22 +708,68 @@ export default function App() {
 
                     <div className="mt-10">
                        <button 
-                          onClick={() => {
-                             const target = prompt(`${selectedCoin.symbol} için hedef fiyat girin (USD):`);
-                             if(target) {
-                                setAlerts([{ id: Date.now(), symbol: selectedCoin.symbol, target: parseFloat(target), type: 'ABOVE', active: true }, ...alerts]);
-                                playPing();
-                                alert("Fiyat Alarmı Kuruldu. Zoreks Ping sistemi aktif.");
-                             }
-                          }}
+                          onClick={() => setShowAlarmModal(true)}
                           className="w-full bg-cyan-500 text-white font-black py-4 rounded-3xl shadow-lg hover:shadow-cyan-500/40 transition-all uppercase tracking-widest text-[11px]"
                        >
-                          ALARM KUR (PING)
+                          ALARM KUR (PRO)
                        </button>
                     </div>
                  </div>
               </div>
            </div>
+
+           {/* PROFESSIONAL ALARM MODAL */}
+           {showAlarmModal && (
+             <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-md flex items-center justify-center p-6 animate-in zoom-in-95 duration-300">
+               <div className="max-w-md w-full bg-[#030712] border border-white/10 p-10 rounded-[3rem] glass shadow-2xl relative overflow-hidden">
+                 <div className="absolute top-0 right-0 p-6">
+                   <button onClick={() => setShowAlarmModal(false)} className="text-gray-500 hover:text-white transition-all text-xl font-black">✕</button>
+                 </div>
+                 <header className="mb-8">
+                   <h3 className="text-2xl font-black italic text-white tracking-widest">ALARM KUR</h3>
+                   <p className="text-[10px] text-cyan-400 font-black uppercase tracking-widest mt-1">{selectedCoin.symbol} İÇİN ÖZEL PİNG</p>
+                 </header>
+
+                 <div className="space-y-6">
+                    <div>
+                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-3">HEDEF FİYAT (USD)</label>
+                      <input 
+                        type="number" 
+                        placeholder={selectedCoin.price.toString()}
+                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 outline-none focus:border-cyan-500/50 text-white font-bold transition-all text-lg"
+                        value={alarmForm.target}
+                        onChange={(e) => setAlarmForm({...alarmForm, target: e.target.value})}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-3">KOŞUL</label>
+                      <select 
+                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 outline-none focus:border-cyan-500/50 text-white font-bold transition-all appearance-none"
+                        value={alarmForm.type}
+                        onChange={(e) => setAlarmForm({...alarmForm, type: e.target.value})}
+                      >
+                        <option value="ABOVE" className="bg-[#030712]">FİYAT ÜSTÜNE ÇIKINCA</option>
+                        <option value="BELOW" className="bg-[#030712]">FİYAT ALTINA İNİNCE</option>
+                      </select>
+                    </div>
+
+                    <button 
+                      onClick={() => {
+                        if(!alarmForm.target) return;
+                        setAlerts([{ id: Date.now(), symbol: selectedCoin.symbol, target: parseFloat(alarmForm.target), type: alarmForm.type, active: true }, ...alerts]);
+                        playPing();
+                        setShowAlarmModal(false);
+                        setAlarmForm({ target: '', type: 'ABOVE' });
+                      }}
+                      className="w-full bg-cyan-500 py-5 rounded-2xl text-white font-black hover:scale-[1.02] active:scale-95 transition-all shadow-2xl tracking-[0.2em] uppercase text-xs"
+                    >
+                      STRATEJİK ALARMI AKTİFLEŞTİR
+                    </button>
+                 </div>
+               </div>
+             </div>
+           )}
         </div>
       )}
 
@@ -698,7 +789,7 @@ export default function App() {
         </div>
 
         <nav className="flex bg-white/5 p-1.5 rounded-[1.5rem] border border-white/10 glass shadow-2xl overflow-x-auto no-scrollbar">
-          {['all', 'altcoins', 'haberler', 'yorumlar', 'admin'].map((tab) => {
+          {['all', 'altcoins', 'haberler', 'yorumlar', 'alarms', 'admin'].map((tab) => {
             if (tab === 'admin' && user?.role !== 'admin') return null;
             return (
               <button 
@@ -706,7 +797,7 @@ export default function App() {
                 onClick={() => setActiveTab(tab)} 
                 className={`px-4 md:px-8 py-2 md:py-3 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase transition-all tracking-tighter whitespace-nowrap flex items-center gap-2 md:gap-3 ${activeTab === tab ? 'bg-cyan-500 text-white shadow-2xl scale-105' : 'text-gray-500 hover:text-white'}`}
               >
-                {tab === 'all' ? 'Tümü' : tab === 'altcoins' ? 'Altcoin Paketi' : tab === 'haberler' ? 'Dünya Gündemi' : tab === 'yorumlar' ? 'Topluluk' : 'Yönetim'}
+                {tab === 'all' ? 'Tümü' : tab === 'altcoins' ? 'Altcoin Paketi' : tab === 'haberler' ? 'Dünya Gündemi' : tab === 'yorumlar' ? 'Topluluk' : tab === 'alarms' ? 'Alarmlarım' : 'Yönetim'}
               </button>
             );
           })}
@@ -775,8 +866,105 @@ export default function App() {
            </div>
         </div>
 
-        {/* Market List */}
-        {activeTab === 'all' || activeTab === 'altcoins' ? (
+        {/* Content Tabs */}
+        {activeTab === 'alarms' ? (
+          <div className="space-y-6 animate-in slide-in-from-bottom-8 duration-500">
+             <div className="bg-white/5 border border-white/10 rounded-[3rem] p-10 glass">
+                <h3 className="text-2xl font-black italic text-white mb-8 tracking-widest uppercase">AKTİF ALARMLARINIZ</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                   {alerts.length === 0 ? (
+                      <p className="text-gray-500 font-bold italic">Henüz bir alarm kurmadınız.</p>
+                   ) : (
+                      alerts.map(a => (
+                        <div key={a.id} className="bg-white/5 border border-white/10 p-6 rounded-[2rem] flex items-center justify-between group hover:bg-white/10 transition-all">
+                           <div>
+                              <p className="text-xl font-mono font-black text-white">{a.symbol}</p>
+                              <p className="text-[10px] font-black text-cyan-400 mt-1 uppercase tracking-widest">
+                                 {a.type === 'ABOVE' ? 'Kırılım Üstü' : 'Düşüş Altı'} {a.target} $
+                              </p>
+                              <span className={`text-[8px] font-black px-2 py-0.5 rounded-full mt-2 inline-block ${a.active ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-500'}`}>
+                                 {a.active ? 'BİLGİ BEKLENİYOR' : 'TETİKLENDİ'}
+                              </span>
+                           </div>
+                           <button 
+                             onClick={() => setAlerts(alerts.filter(x => x.id !== a.id))}
+                             className="text-gray-600 hover:text-red-500 font-black text-lg p-2 transition-all"
+                           >✕</button>
+                        </div>
+                      ))
+                   )}
+                </div>
+             </div>
+          </div>
+        ) : activeTab === 'yorumlar' ? (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 animate-in fade-in duration-700">
+            <div className="lg:col-span-2 space-y-6">
+               {/* POST COMMENT FORM */}
+               <div className="bg-white/5 border border-white/10 p-8 rounded-[3rem] glass shadow-2xl relative overflow-hidden group">
+                  <div className="absolute -top-10 -right-10 w-40 h-40 bg-cyan-500/5 blur-3xl group-hover:bg-cyan-500/10 transition-all" />
+                  <h3 className="text-xl font-black italic text-white mb-6 uppercase tracking-widest">STRATEJİK YORUMUNUZU PAYLAŞIN</h3>
+                  <form onSubmit={addComment} className="space-y-6">
+                     <textarea 
+                        placeholder="Piyasa beklentinizi buraya yazın..."
+                        className="w-full bg-white/5 border border-white/10 rounded-[2rem] px-8 py-6 outline-none focus:border-cyan-500/50 text-white font-bold transition-all min-h-[150px] resize-none text-[15px]"
+                        value={commentInput}
+                        onChange={(e) => setCommentInput(e.target.value)}
+                     />
+                     <div className="flex flex-wrap items-center justify-between gap-6">
+                        <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10 glass">
+                           {['Bullish', 'Bearish'].map((s) => (
+                             <button 
+                               key={s} 
+                               type="button"
+                               onClick={() => setCommentSentiment(s)}
+                               className={`px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${commentSentiment === s ? (s === 'Bullish' ? 'bg-green-500 text-white' : 'bg-red-500 text-white') : 'text-gray-500 hover:text-white'}`}
+                             >
+                               {s === 'Bullish' ? 'BOĞA (AL)' : 'AYI (SAT)'}
+                             </button>
+                           ))}
+                        </div>
+                        <button type="submit" className="px-12 py-4 bg-cyan-500 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-cyan-400 transition-all hover:scale-105 active:scale-95 shadow-2xl shadow-cyan-500/20">PAYLAŞ</button>
+                     </div>
+                  </form>
+               </div>
+
+               {/* COMMENTS FEED */}
+               <div className="space-y-6">
+                 {comments.map((c) => (
+                   <div key={c.id} className="bg-white/5 border border-white/10 p-8 rounded-[2.5rem] glass shadow-xl hover:bg-white/[0.08] transition-all relative group">
+                      <div className="flex items-center justify-between mb-4">
+                         <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 bg-cyan-500/20 rounded-full flex items-center justify-center text-cyan-400 font-black italic">{c.user.charAt(0)}</div>
+                            <span className="font-black text-white italic tracking-tighter uppercase">{c.user}</span>
+                            <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest">{c.time} ÖNCE</span>
+                         </div>
+                         <span className={`text-[9px] font-black px-4 py-1.5 rounded-full border ${c.sentiment === 'Bullish' ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-red-500/10 border-red-500/30 text-red-500'}`}>
+                           {c.sentiment.toUpperCase()}
+                         </span>
+                      </div>
+                      <p className="text-[15px] font-medium text-slate-300 leading-relaxed italic">"{c.text}"</p>
+                      {user?.role === 'admin' && (
+                        <div className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+                           <button onClick={() => banUser(c.user)} className="bg-red-500/20 p-2 rounded-lg text-red-500 hover:bg-red-500 hover:text-white transition-all text-[8px] font-black uppercase">BANLA</button>
+                           <button onClick={() => deleteComment(c.id)} className="bg-white/10 p-2 rounded-lg text-white hover:bg-red-500 transition-all text-xs font-black">✕</button>
+                        </div>
+                      )}
+                   </div>
+                 ))}
+               </div>
+            </div>
+            <div className="space-y-8">
+               <div className="bg-cyan-500/5 border border-cyan-500/20 p-10 rounded-[3rem] glass">
+                  <h3 className="text-xl font-black italic text-white mb-6 uppercase tracking-widest">TOPLULUK KURALLARI</h3>
+                  <ul className="space-y-4 text-xs font-bold text-slate-400 uppercase tracking-widest leading-loose">
+                     <li className="flex gap-3"><span className="text-cyan-500">▶</span> Manipülasyon yapmak yasaktır.</li>
+                     <li className="flex gap-3"><span className="text-cyan-500">▶</span> Saygılı analiz paylaşımı şarttır.</li>
+                     <li className="flex gap-3"><span className="text-cyan-500">▶</span> Reklam içerikleri anında banlanır.</li>
+                  </ul>
+               </div>
+            </div>
+          </div>
+        ) : activeTab === 'all' || activeTab === 'altcoins' ? (
           <div className="bg-white/[0.01] rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl glass animate-in fade-in duration-700">
             <table className="w-full text-left">
               <thead>
@@ -803,8 +991,11 @@ export default function App() {
                     <tr key={t.symbol} className={`group hover:bg-white/[0.08] transition-all duration-300 cursor-pointer ${flashClass}`} onClick={() => setSelectedCoin(t)}>
                       <td className="px-10 py-10">
                         <div className="flex items-center gap-5">
-                          <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 flex items-center justify-center text-cyan-400 font-black text-xl italic group-hover:bg-cyan-500 group-hover:text-white transition-all shadow-xl border border-white/5">
+                          <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 flex items-center justify-center text-cyan-400 font-black text-xl italic group-hover:bg-cyan-500 group-hover:text-white transition-all shadow-xl border border-white/5 relative">
                             {t.symbol.charAt(0)}
+                            {alerts.some(a => a.symbol === t.symbol && a.active) && (
+                               <div className="absolute -top-2 -right-2 bg-cyan-500 w-5 h-5 rounded-full flex items-center justify-center text-[10px] animate-pulse border-2 border-[#030712] shadow-lg">🔔</div>
+                            )}
                           </div>
                           <p className="font-black text-2xl group-hover:text-cyan-400 transition-colors uppercase italic tracking-tighter">{t.symbol.replace('USDT', '')}</p>
                         </div>
