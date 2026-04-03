@@ -904,12 +904,12 @@ export default function App() {
               {/* MODAL HEADER */}
               <div className="p-6 md:p-8 border-b border-white/10 flex flex-wrap items-center justify-between gap-6 bg-white/[0.02]">
                  <div className="flex items-center gap-4 md:gap-6 pt-10 md:pt-0">
-                    <div className="w-14 h-14 bg-cyan-500 rounded-2xl flex items-center justify-center text-white font-black text-2xl italic shadow-2xl">{liveCoin.symbol.charAt(0)}</div>
+                    <div className="w-10 h-10 md:w-14 md:h-14 bg-cyan-500 rounded-[0.8rem] md:rounded-2xl flex items-center justify-center text-white font-black text-xl md:text-2xl italic shadow-2xl">{liveCoin.symbol.charAt(0)}</div>
                     <div>
-                       <h2 className="text-3xl font-black italic tracking-tighter text-white uppercase leading-none">{liveCoin.symbol.replace('USDT', '')} <span className="text-cyan-500 text-lg md:text-3xl">PRO</span></h2>
-                       <div className="flex items-center gap-2 mt-1">
-                          <div className="w-2 h-2 bg-cyan-500 rounded-full animate-ping" />
-                          <p className="text-[9px] text-gray-500 font-black tracking-widest uppercase mb-0">ZOR AI STRATEJİK ANALİZ v4.0.13</p>
+                       <h2 className="text-xl md:text-3xl font-black italic tracking-tighter text-white uppercase leading-none">{liveCoin.symbol.replace('USDT', '')} <span className="text-cyan-500 text-xl md:text-3xl">PRO</span></h2>
+                       <div className="flex items-center gap-1.5 md:gap-2 mt-1">
+                          <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-cyan-500 rounded-full animate-ping" />
+                          <p className="text-[7px] md:text-[9px] text-gray-500 font-black tracking-widest uppercase mb-0">ZOR AI ANALİZ</p>
                        </div>
                     </div>
                  </div>
@@ -919,7 +919,7 @@ export default function App() {
                        <button 
                           key={tab}
                           onClick={() => setModalTab(tab)}
-                          className={`px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${modalTab === tab ? 'bg-cyan-500 text-white shadow-xl' : 'text-gray-500 hover:bg-white/5 hover:text-white'}`}
+                          className={`px-4 md:px-8 py-2 md:py-2.5 rounded-lg md:rounded-xl text-[8px] md:text-[10px] font-black uppercase tracking-widest transition-all ${modalTab === tab ? 'bg-cyan-500 text-white shadow-xl' : 'text-gray-500 hover:bg-white/5 hover:text-white'}`}
                        >
                           {tab === 'chart' ? 'Grafik' : tab === 'sentiment' ? 'Al/Sat Analizi' : tab === 'strateji' ? 'Pro Strateji' : tab === 'trade' ? 'İşlem (PRO)' : 'Emir Defteri'}
                        </button>
@@ -1478,7 +1478,7 @@ export default function App() {
                <h1 className="text-2xl md:text-4xl font-black italic tracking-tighter uppercase text-white leading-none">ZOREKS</h1>
                <div className="flex items-center gap-2 mt-1">
                   <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                  <span className="text-[8px] md:text-[9px] font-black text-gray-600 tracking-[0.3em] md:tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.14</span>
+                  <span className="text-[8px] md:text-[9px] font-black text-gray-600 tracking-[0.3em] md:tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.15</span>
                </div>
              </div>
           </div>
