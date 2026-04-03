@@ -1475,7 +1475,7 @@ export default function App() {
                <h1 className="text-2xl md:text-4xl font-black italic tracking-tighter uppercase text-white leading-none">ZOREKS</h1>
                <div className="flex items-center gap-2 mt-1">
                   <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                  <span className="text-[8px] md:text-[9px] font-black text-gray-600 tracking-[0.3em] md:tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.11</span>
+                  <span className="text-[8px] md:text-[9px] font-black text-gray-600 tracking-[0.3em] md:tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.12</span>
                </div>
              </div>
           </div>
@@ -1755,45 +1755,54 @@ export default function App() {
                    )}
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10">
                    {/* BALANCE MANAGEMENT CARD */}
-                   <div className="bg-white/5 border border-white/10 p-10 rounded-[3rem] text-left lg:col-span-2 glass">
-                      <h3 className="text-xl font-black italic text-white tracking-widest mb-10 uppercase">SİMÜLASYON BAKİYE YÖNETİMİ</h3>
-                      <div className="flex items-center gap-6">
-                         <input 
-                           type="number" 
-                           id="fund-amount-v3" 
-                           placeholder="Yüklenecek Tutar (USD)" 
-                           className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-6 py-4 outline-none focus:border-cyan-500/50 text-white font-bold" 
-                         />
-                         <button 
-                           onClick={() => {
-                             const val = document.getElementById('fund-amount-v3').value;
-                             if(val) fundUser(val);
-                             document.getElementById('fund-amount-v3').value = '';
-                           }}
-                           className="bg-cyan-500 px-10 py-4 rounded-2xl text-white font-black hover:bg-cyan-400 transition-all uppercase text-xs shadow-2xl shadow-cyan-500/20"
-                         >
-                           BAKİYE EKLE
-                         </button>
+                   <details className="bg-white/5 border border-white/10 p-6 md:p-10 rounded-3xl md:rounded-[3rem] text-left lg:col-span-2 glass group">
+                      <summary className="text-base md:text-xl font-black italic text-white tracking-widest uppercase cursor-pointer flex justify-between items-center list-none outline-none">
+                         <span>SİMÜLASYON BAKİYE YÖNETİMİ</span>
+                         <span className="text-cyan-500 group-open:rotate-180 transition-transform">▼</span>
+                      </summary>
+                      <div className="mt-6 md:mt-10 animate-in fade-in zoom-in-95 duration-300">
+                         <div className="flex flex-col md:flex-row items-center gap-4 md:gap-6">
+                            <input 
+                              type="number" 
+                              id="fund-amount-v3" 
+                              placeholder="Yüklenecek Tutar (USD)" 
+                              className="w-full md:flex-1 bg-white/5 border border-white/10 rounded-2xl px-6 py-4 outline-none focus:border-cyan-500/50 text-white font-bold" 
+                            />
+                            <button 
+                              onClick={() => {
+                                const val = document.getElementById('fund-amount-v3').value;
+                                if(val) fundUser(val);
+                                document.getElementById('fund-amount-v3').value = '';
+                              }}
+                              className="w-full md:w-auto bg-cyan-500 px-10 py-5 md:py-4 rounded-2xl text-white font-black hover:bg-cyan-400 transition-all uppercase text-sm md:text-xs shadow-2xl shadow-cyan-500/20"
+                            >
+                              BAKİYE EKLE
+                            </button>
+                         </div>
+                         <p className="text-[9px] font-bold text-gray-600 mt-4 italic uppercase leading-relaxed">NOT: BU BAKİYE SADECE SİMÜLASYON İÇİNDİR VE SİTENİN DOĞRULUĞUNU HESAPLAMAK İÇİN KULLANILIR.</p>
                       </div>
-                      <p className="text-[9px] font-bold text-gray-600 mt-4 italic uppercase">NOT: BU BAKİYE SADECE SİMÜLASYON İÇİNDİR VE SİTENİN DOĞRULUĞUNU HESAPLAMAK İÇİN KULLANILIR.</p>
-                   </div>
+                   </details>
 
-                   <div className="bg-white/5 p-10 rounded-[2.5rem] text-left border border-white/10">
-                      <h3 className="text-xs font-black text-gray-600 uppercase tracking-widest mb-6">Kara Liste (Ban)</h3>
-                      <div className="space-y-4">
+                   <details className="bg-white/5 p-6 md:p-10 rounded-3xl md:rounded-[2.5rem] text-left border border-white/10 group">
+                      <summary className="text-sm font-black text-gray-400 uppercase tracking-widest cursor-pointer flex justify-between items-center list-none outline-none">
+                         <span>Kara Liste (Ban) Yönetimi</span>
+                         <span className="text-gray-600 group-open:rotate-180 transition-transform">▼</span>
+                      </summary>
+                      <div className="space-y-4 mt-6 md:mt-8 animate-in fade-in duration-300">
                          {bannedUsers.map(b => (
-                            <div key={b} className="flex justify-between p-4 bg-red-500/10 border border-red-500/20 rounded-2xl font-black text-red-500 text-sm italic">{b} <span>BLOKLANDI</span></div>
+                            <div key={b} className="flex justify-between p-4 bg-red-500/10 border border-red-500/20 rounded-2xl font-black text-red-500 text-xs md:text-sm italic">{b} <span>BLOKLANDI</span></div>
                          ))}
-                         <div className="flex gap-4">
-                            <input type="text" id="banInput2" placeholder="Hedef Kullanıcı..." className="flex-1 bg-white/5 p-4 rounded-xl text-sm border border-white/5 outline-none focus:border-red-500/50" />
-                            <button onClick={() => { const inp = document.getElementById('banInput2'); if(inp.value) banUser(inp.value); inp.value=''; }} className="bg-red-500 px-8 rounded-xl font-black text-white text-[10px] uppercase shadow-2xl">BANLA</button>
+                         <div className="flex flex-col md:flex-row gap-4">
+                            <input type="text" id="banInput2" placeholder="Hedef Kullanıcı..." className="w-full md:flex-1 bg-white/5 p-4 rounded-xl text-sm border border-white/5 outline-none focus:border-red-500/50" />
+                            <button onClick={() => { const inp = document.getElementById('banInput2'); if(inp.value) banUser(inp.value); inp.value=''; }} className="w-full md:w-auto bg-red-500 py-4 md:px-8 rounded-xl font-black text-white text-[10px] uppercase shadow-2xl">BANLA</button>
                          </div>
                       </div>
-                   </div>
-                   <div className="bg-white/5 p-10 rounded-[2.5rem] flex flex-col justify-center space-y-4 text-left border border-white/10">
-                      <h3 className="text-xs font-black text-gray-600 uppercase tracking-widest mb-4">Sistem Sağlığı</h3>
+                   </details>
+                   
+                   <div className="bg-white/5 p-6 md:p-10 rounded-3xl md:rounded-[2.5rem] flex flex-col justify-center space-y-4 text-left border border-white/10">
+                      <h3 className="text-xs font-black text-gray-600 uppercase tracking-widest mb-2">Sistem Sağlığı</h3>
                       <div className="flex justify-between font-black text-xs uppercase opacity-70"><span>Sunucu Gecikmesi:</span> <span className="text-cyan-400">14ms</span></div>
                       <div className="flex justify-between font-black text-xs uppercase opacity-70"><span>Canlı Veri Havuzu:</span> <span className="text-cyan-400">Aktif</span></div>
                       <div className="flex justify-between font-black text-xs uppercase opacity-70"><span>Güvenlik Katmanı:</span> <span className="text-green-400">Maksimum</span></div>
