@@ -292,7 +292,8 @@ export default function App() {
   ]);
 
   const ws = useRef(null);
-
+  const tradeBuffer = useRef([]);
+  const [shortTermSentiment, setShortTermSentiment] = useState({ buy: 0, sell: 0, ratio: 50 });
   const [accounts, setAccounts] = useState(JSON.parse(localStorage.getItem('zoreks_accounts')) || []);
 
   useEffect(() => { localStorage.setItem('zoreks_accounts', JSON.stringify(accounts)); }, [accounts]);
@@ -397,12 +398,15 @@ export default function App() {
 
     const symbol = selectedCoin.symbol;
     const s_low = symbol.toLowerCase();
-    const url = `wss://stream.binance.com:9443/ws/${s_low}@depth10/${s_low}@trade`;
+    // bookTicker for millisecond price updates, trade for sentiment
+    const url = `wss://stream.binance.com:9443/ws/${s_low}@bookTicker/${s_low}@trade`;
     
     if (detailWs.current) detailWs.current.close();
     detailWs.current = new WebSocket(url);
 
-    // Initial Analysis & Futures Data
+    tradeBuffer.current = [];
+    setShortTermSentiment({ buy: 0, sell: 0, ratio: 50 });
+
     const updateStats = async () => {
       setAiAnalysis(generateDetailedAIAnalysis(selectedCoin));
       try {
@@ -446,11 +450,40 @@ export default function App() {
 
     detailWs.current.onmessage = (e) => {
       const data = JSON.parse(e.data);
-      if (data.e === 'depthUpdate' || !data.e) {
-        if (data.b && data.a) setOrderBook({ bids: data.b.slice(0, 10), asks: data.a.slice(0, 10) });
+      
+      if (data.e === 'bookTicker') {
+        // ULTRA-SYNC: Update price from bookTicker (Bid/Ask mid-price or best price)
+        const bestPrice = (parseFloat(data.b) + parseFloat(data.a)) / 2;
+        setTickers(prev => ({
+          ...prev,
+          [symbol]: {
+            ...(prev[symbol] || {}),
+            price: bestPrice,
+            lastUpdate: Date.now()
+          }
+        }));
       } else if (data.e === 'trade') {
-        const newTrade = { id: data.t, price: parseFloat(data.p), qty: parseFloat(data.q), time: new Date(data.T).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }), side: data.m ? 'sell' : 'buy' };
+        const price = parseFloat(data.p);
+        const qty = parseFloat(data.q);
+        const isBuyerMaker = data.m; // true if sell, false if buy
+        const side = isBuyerMaker ? 'sell' : 'buy';
+
+        const newTrade = { id: data.t, price, qty, time: new Date(data.T).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), side };
         setRecentTrades(prev => [newTrade, ...prev].slice(0, 15));
+
+        // 30s MOMENTUM: Add to buffer and calculate sentiment
+        const now = Date.now();
+        tradeBuffer.current.push({ price, qty, side, time: now });
+        
+        // Remove trades older than 30s
+        tradeBuffer.current = tradeBuffer.current.filter(t => now - t.time <= 30000);
+        
+        const buyVol = tradeBuffer.current.filter(t => t.side === 'buy').reduce((sum, t) => sum + (t.price * t.qty), 0);
+        const sellVol = tradeBuffer.current.filter(t => t.side === 'sell').reduce((sum, t) => sum + (t.price * t.qty), 0);
+        const totalVol = buyVol + sellVol;
+        const ratio = totalVol > 0 ? (buyVol / totalVol) * 100 : 50;
+
+        setShortTermSentiment({ buy: buyVol, sell: sellVol, ratio });
       }
     };
 
@@ -769,7 +802,7 @@ export default function App() {
                                        <div className="absolute top-0 left-0 w-full h-1 bg-white/10">
                                           <div className="h-full bg-green-500 transition-all duration-1000" style={{ width: `${liveCoin.buyRatio || 50}%` }} />
                                        </div>
-                                       <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4">ANLIK DOMİNASYON</p>
+                                       <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4">24 SAAT ANALİZİ</p>
                                        <p className={`text-4xl md:text-5xl font-black italic tracking-tighter mb-6 ${liveCoin.buyRatio > 50 ? 'text-green-400' : 'text-red-400'}`}>
                                           %{liveCoin.buyRatio?.toFixed(1) || '50.0'} {liveCoin.buyRatio > 50 ? 'BOĞA' : 'AYI'}
                                        </p>
@@ -783,6 +816,28 @@ export default function App() {
                                              <p className="text-red-500 text-sm italic font-mono font-bold">${(((liveCoin.volume || 0) - (liveCoin.buyVol || 0)) / 1000000).toFixed(2)}M</p>
                                           </div>
                                        </div>
+                                    </div>
+
+                                    {/* 30s MOMENTUM UI */}
+                                    <div className="bg-cyan-500/5 p-8 rounded-[2.5rem] border border-cyan-500/20 text-center relative overflow-hidden animate-pulse">
+                                       <div className="absolute top-0 left-0 w-full h-1 bg-white/10">
+                                          <div className="h-full bg-cyan-400 transition-all duration-300" style={{ width: `${shortTermSentiment.ratio}%` }} />
+                                       </div>
+                                       <p className="text-[10px] font-black text-cyan-400 uppercase tracking-widest mb-4">30 SANİYE MOMENTUM (ULTRA-SYNC)</p>
+                                       <div className="flex items-center justify-center gap-6 mb-6">
+                                          <p className={`text-4xl font-black italic tracking-tighter ${shortTermSentiment.ratio > 50 ? 'text-green-400' : 'text-red-400'}`}>
+                                             %{shortTermSentiment.ratio.toFixed(1)}
+                                          </p>
+                                          <div className="flex flex-col items-start leading-none uppercase font-black text-[12px] italic">
+                                             <span className={shortTermSentiment.ratio > 50 ? 'text-green-400' : 'text-gray-500'}>ALIM KUVVETİ</span>
+                                             <span className={shortTermSentiment.ratio <= 50 ? 'text-red-400' : 'text-gray-500'}>SATIŞ BASKISI</span>
+                                          </div>
+                                       </div>
+                                       <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden flex">
+                                          <div className="h-full bg-green-500 transition-all duration-300 shadow-[0_0_15px_rgba(34,197,94,0.6)]" style={{ width: `${shortTermSentiment.ratio}%` }} />
+                                          <div className="h-full bg-red-500 transition-all duration-300 shadow-[0_0_15px_rgba(239,68,68,0.6)]" style={{ width: `${100 - shortTermSentiment.ratio}%` }} />
+                                       </div>
+                                       <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mt-6">CANLI TRADE AKIŞI ANALİZ EDİLİYOR...</p>
                                     </div>
                                    <div className="bg-cyan-500/5 p-6 rounded-2xl border border-cyan-500/20 text-center">
                                       <p className="text-[10px] font-black text-cyan-400 uppercase tracking-widest mb-2">FONLAMA (8S)</p>
