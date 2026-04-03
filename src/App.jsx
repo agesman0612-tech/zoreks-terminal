@@ -926,11 +926,12 @@ export default function App() {
                     ))}
                  </nav>
 
-                 <div className="text-right hidden md:block">
-                    <p className="text-2xl font-black text-white font-mono tracking-tighter">${liveCoin.price?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-                    <p className={`text-[11px] font-black mt-1 ${liveCoin.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                       {liveCoin.change >= 0 ? '+' : ''}{liveCoin.change}% (24S)
-                    </p>
+                 {/* LIVE PRICE - visible on all screens */}
+                 <div className="flex items-center gap-3">
+                    <p className="text-xl md:text-2xl font-black text-white font-mono tracking-tighter">${liveCoin.price?.toLocaleString(undefined, { minimumFractionDigits: liveCoin.price < 1 ? 4 : 2 })}</p>
+                    <span className={`text-[10px] md:text-[11px] font-black px-2 py-0.5 rounded-md ${liveCoin.change >= 0 ? 'text-green-400 bg-green-500/10' : 'text-red-400 bg-red-500/10'}`}>
+                       {liveCoin.change >= 0 ? '+' : ''}{liveCoin.change}%
+                    </span>
                  </div>
               </div>
 
@@ -1489,7 +1490,7 @@ export default function App() {
                <h1 className="text-2xl md:text-4xl font-black italic tracking-tighter uppercase text-white leading-none">ZOREKS</h1>
                <div className="flex items-center gap-2 mt-1">
                   <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                  <span className="text-[8px] md:text-[9px] font-black text-gray-600 tracking-[0.3em] md:tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.19</span>
+                  <span className="text-[8px] md:text-[9px] font-black text-gray-600 tracking-[0.3em] md:tracking-[0.5em] uppercase">{status} ANALİZ | v4.0.20</span>
                </div>
              </div>
           </div>
